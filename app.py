@@ -8,7 +8,7 @@ from modules.data_loader import (
     MONTHS,
 )
 from modules import views
-from modules.usability import reset_filters, set_period, navigate
+from modules.usability import reset_filters, set_period, navigate, open_assistant
 
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"
@@ -151,6 +151,31 @@ with st.expander("New here? Start with a planning question"):
         column.button(label, on_click=navigate, args=(destination,), width="stretch")
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
+if page != "SupplyIQ assistant":
+    with st.container(border=True, key="assistant_launcher"):
+        message, open_button, summary_button = st.columns(
+            [3, 1, 1.4], vertical_alignment="center"
+        )
+        with message:
+            st.markdown("**SupplyIQ — AI Planning Assistant**")
+            st.caption("Ask a question or get a summary of the data you selected.")
+        open_button.button(
+            "Ask SupplyIQ",
+            icon=":material/chat:",
+            key="open_supplyiq",
+            on_click=open_assistant,
+            type="primary",
+            width="stretch",
+        )
+        summary_button.button(
+            "Summarize my selection",
+            icon=":material/insights:",
+            key="summary_supplyiq",
+            on_click=open_assistant,
+            args=("Summarize the main supply planning insights.",),
+            disabled=filtered.empty,
+            width="stretch",
+        )
 st.caption(
     f"SCOPE  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
     + ("uploaded workbook" if uploaded else "assessment workbook")

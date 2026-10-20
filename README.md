@@ -119,3 +119,9 @@ Every graph has an **About this chart** caption with a hover-help icon. Hover to
 ### Plain-language wording
 
 Technical names stay unchanged, including **MoM Demand Growth**, **Active SKUs**, **Net demand**, **Demand CV**, **ABC–XYZ**, **MAE** and **WAPE**. Their explanations, hover help, planning advice and assistant answers use everyday wording. For example, the explanation of net demand says **units sold minus returns**. The sidebar's **Quick word guide** explains common terms. Tables keep their original column identifiers and provide simple column-header help. Detailed formulas remain in the methodology guide. Calculations, group cutoffs and CSV column identifiers remain unchanged; the assistant also understands questions about “uneven demand” or “demand swings.”
+
+### SupplyIQ buttons
+
+Every dashboard page now has a visible **Ask SupplyIQ** button and **Summarize my selection** action. The first opens your conversation; the second opens the assistant and answers a summary question immediately. Both keep your current filters.
+
+Inside SupplyIQ, six quick-question buttons run real calculations without typing: summary, top 10 SKUs, demand variability, AZ products, declining categories and unusual demand changes. Follow-up buttons offer planning priorities, monthly demand and an explanation of unavailable stock data. The existing question dropdown and typed chat remain available. Button questions are consumed once, so refreshing the page does not submit them again. No API key is required.

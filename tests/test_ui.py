@@ -92,3 +92,28 @@ def test_visual_metric_exploration():
     app.button(key="focus_0").click().run()
     assert not app.exception
     assert "441,894,325" in app.metric[0].value
+
+
+def test_supplyiq_launcher_and_question_buttons():
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
+    app.multiselect(key="filter_division").set_value(["Food"]).run()
+    app.button(key="summary_supplyiq").click().run()
+    assert not app.exception
+    assert app.radio(key="workspace").value == "SupplyIQ assistant"
+    assert len(app.chat_message) == 2
+    assert "193,130,712.74" in app.chat_message[1].markdown[0].value
+    assert "assistant_pending_question" not in app.session_state
+    next(b for b in app.button if b.label == "Top 10 SKUs").click().run()
+    assert not app.exception
+    assert len(app.chat_message) == 4
+    assert app.session_state["chat_context"]["intent"] == "top"
+    next(b for b in app.button if b.label == "Monthly demand").click().run()
+    assert not app.exception
+    assert len(app.chat_message) == 6
+    app.run()
+    assert len(app.chat_message) == 6  # A queued question is consumed exactly once.
+    app.sidebar.radio[0].set_value("Executive overview").run()
+    app.button(key="open_supplyiq").click().run()
+    assert not app.exception
+    assert app.radio(key="workspace").value == "SupplyIQ assistant"
+    assert len(app.chat_message) == 6

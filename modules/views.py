@@ -10,7 +10,7 @@ from .kpi_calculations import kpis, monthly_demand, group_summary, executive_ins
 from .abc_xyz_analysis import classify, RECOMMENDATIONS
 from .forecasting import forecast
 from .ai_assistant import answer, FOLLOWUPS
-from .usability import set_scenario
+from .usability import set_scenario, queue_question
 from .theme import focus_metric
 from .presentation import display_table
 from .visualizations import show, line, bar
@@ -549,6 +549,30 @@ def assistant(data, months, thresholds, scope):
     st.caption(
         "Chat starts fresh when you change filters, the file or group settings, so old answers are not mixed with new selections."
     )
+    st.subheader("What would you like to know?")
+    st.caption(
+        "Choose a button to get an answer from your selected data, or type your own question below."
+    )
+    quick_questions = [
+        ("Summarize my data", "Summarize the main supply planning insights."),
+        ("Top 10 SKUs", "Which 10 SKUs generated the highest sales in 2024?"),
+        ("Demand variability", "Which products have the biggest demand swings?"),
+        ("Show AZ products", "Which products belong to the AZ category?"),
+        ("Declining categories", "Which categories experienced declining demand?"),
+        ("Unusual demand changes", "Identify significant demand anomalies."),
+    ]
+    for offset in (0, 3):
+        columns = st.columns(3)
+        for column, (label, prompt) in zip(
+            columns, quick_questions[offset : offset + 3]
+        ):
+            column.button(
+                label,
+                key="quick_" + str(offset) + "_" + label,
+                on_click=queue_question,
+                args=(prompt,),
+                width="stretch",
+            )
     example = st.selectbox(
         "Try a question",
         [
@@ -569,6 +593,9 @@ def assistant(data, months, thresholds, scope):
     )
     if submit:
         question = example
+    queued = st.session_state.pop("assistant_pending_question", None)
+    if not question and queued:
+        question = queued
     if question:
         with st.spinner("Calculating from selected data…"):
             result = answer(
@@ -615,6 +642,27 @@ def assistant(data, months, thresholds, scope):
                         )
                         show(fig, key=f"chat_chart_{i}")
                 st.caption("Follow up: " + " • ".join(FOLLOWUPS))
+    if st.session_state.messages:
+        st.markdown("**Keep exploring**")
+        followups = st.columns(3)
+        for i, (column, label, prompt) in enumerate(
+            zip(
+                followups,
+                ["Review priorities", "Monthly demand", "Explain missing stock data"],
+                [
+                    "Which SKUs should planners prioritize for investigation?",
+                    "Show monthly demand growth",
+                    "What inventory should we replenish?",
+                ],
+            )
+        ):
+            column.button(
+                label,
+                key=f"followup_{i}",
+                on_click=queue_question,
+                args=(prompt,),
+                width="stretch",
+            )
     st.caption(
         "No free-form SQL or code execution. Questions are mapped to fixed analytical functions; DuckDB runs parameterized, fixed read-only aggregation. API failure falls back to the local assistant. Forecasts and classification are analytical estimates, not inventory advice."
     )

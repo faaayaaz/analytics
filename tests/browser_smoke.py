@@ -74,12 +74,16 @@ with sync_playwright() as p:
     event.value.save_as("/tmp/forecast_estimates.csv")
     forecast = pd.read_csv("/tmp/forecast_estimates.csv")
     assert len(forecast) == 3 and "2025" in forecast.month.iloc[0]
-    page.get_by_text("SupplyIQ assistant", exact=True).first.click()
+    page.locator(".st-key-open_supplyiq button").click()
     page.get_by_role("button", name="Analyze selected question").wait_for(timeout=30000)
     page.get_by_role("button", name="Analyze selected question").click()
     page.get_by_text("Top 10 products by sales after returns", exact=False).wait_for(
         timeout=30000
     )
+    page.get_by_role("button", name="Demand variability", exact=True).click()
+    page.get_by_text(
+        "Products with the biggest month-to-month swings", exact=False
+    ).wait_for(timeout=30000)
     page.get_by_text("Data quality & exports", exact=True).first.click()
     page.get_by_text("Data quality & reconciliation", exact=True).wait_for(
         timeout=30000

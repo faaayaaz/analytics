@@ -52,3 +52,7 @@ The full automated suite reports **31 passed** after simplifying the wording. Ta
 ## Technical-label clarification
 
 Original KPI names, graph-axis labels, table column identifiers, forecast error names and control labels are restored. Plain-language explanations, hover help, recommendations and the glossary remain. Calculations and downloaded data are unchanged. The regression tests verify the original KPI heading and scenario labels alongside the simpler explanation tooltips.
+
+## SupplyIQ interaction buttons
+
+The full suite reports **32 passed**. A new Streamlit interaction test opens a summary from a Food-filtered dashboard, verifies the AED 193,130,712.74 result, runs a quick top-SKU question and monthly-demand follow-up, confirms that rerunning does not duplicate questions, and reopens the assistant while preserving the current conversation. Browser checks also open the assistant using its new dashboard button and execute the Demand variability quick question, alongside the existing chart, table, filter and CSV checks.
