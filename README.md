@@ -111,3 +111,7 @@ These controls reuse the original analytical functions and preserve the underlyi
 The interface now includes interactive KPI cards with monthly sparklines and a focused chart, line/area chart switching, and three executive tabs: **Performance studio**, **Business mix**, and **Growth & insights**. Cards, navigation and controls have hover, selected and keyboard-focus states; insight cards and coordinated tooltips improve visual scanning. Layouts adapt to narrow screens, and decorative motion respects the operating system's reduced-motion setting.
 
 The version immediately before this visual refresh is preserved as **`dashboard-v2-before-ui`**. The earliest original remains available as **`dashboard-v1-original`**. Both are GitHub tags; restoring a prior version can be done in a new commit without erasing history.
+
+### Hover explanations
+
+Every graph has an **About this chart** caption with a hover-help icon. Hover to see what the graph represents, the measures/units, how to interpret colours or axes, and relevant limitations. On touch screens, tap the help indicator. Data points retain their value tooltips with clearer measure labels. Matrix cells explicitly identify ABC class, XYZ class and product count; growth cells identify division, month and percentage. KPI cards retain their definition help icons.

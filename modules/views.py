@@ -111,7 +111,12 @@ def overview(data, months):
             else line(history, "month", focused, "Selected KPI • monthly history")
         )
         plot.update_traces(line_color="#009e98")
-        show(plot, key="focused_metric_chart")
+        show(
+            plot,
+            key="focused_metric_chart",
+            help_text=DEFINITIONS[focused]
+            + " This graph shows that measure separately for each included month. The card above summarizes the full selection. For average monthly net demand, each point is that month’s contribution divided by 12; for growth, only adjacent selected months with a positive prior value are valid.",
+        )
         l, r = st.columns(2)
         with l:
             show(line(m, "month", "sales", "Monthly net sales • AED"))

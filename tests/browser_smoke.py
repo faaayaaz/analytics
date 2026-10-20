@@ -15,6 +15,11 @@ with sync_playwright() as p:
     page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
     page.locator(".js-plotly-plot:visible").nth(2).wait_for(timeout=30000)
     assert page.locator(".js-plotly-plot:visible").count() >= 3
+    # Verify the accessible chart-explanation tooltip.
+    page.get_by_role("button", name="Help", exact=True).first.hover()
+    expect(page.get_by_role("tooltip")).to_contain_text(
+        "Sum of signed net sales values", timeout=10000
+    )
     # Exercise real Plotly hover and built-in interaction controls.
     plot = page.locator(".js-plotly-plot").first
     plot.hover()

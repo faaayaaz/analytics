@@ -40,3 +40,7 @@ The original version was preserved remotely as `dashboard-v1-original` at `c7d5a
 ## Visual UI refresh
 
 The version before the visual refresh is preserved remotely as `dashboard-v2-before-ui`. The updated suite reports **29 passed**, including an additional test for interactive KPI focus and tab presence. Chromium checks additionally click a KPI trend action, switch the main chart to Line, open Business mix and Growth & insights tabs, and then exercise the existing five-page, SKU selection and download workflow. Desktop and 390-pixel mobile layouts render without main-content horizontal overflow. Source totals and analytical definitions are unchanged.
+
+## Hover-help update
+
+The automated suite reports **31 passed**, adding checks for chart-specific guidance, chart-help descriptions, matrix value tooltips and plain-language axis units. The live Chromium smoke test also hovers over the chart-caption help icon and checks that the selected KPI's explanation appears before exercising chart controls, tabs, SKU selection and downloads.
