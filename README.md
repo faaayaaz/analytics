@@ -83,3 +83,25 @@ docs/                          # Methodology, executive summary, validation
 ```
 
 Runtime dependencies are declared in `requirements.txt`; tested versions are recorded in `requirements.lock.txt`. Use `pip install -r requirements.lock.txt` to reproduce the tested direct versions. Optional browser validation uses Playwright and a local Chromium installation; neither is required to run the dashboard.
+
+## Usability update and preserved original
+
+The original tested dashboard is preserved on GitHub as the annotated tag **`dashboard-v1-original`**, pointing to commit `c7d5a45`. This tag was pushed before any usability edits. Browse or download that version from the repository's Tags list. To inspect it locally without discarding the updated version:
+
+```bash
+git fetch origin --tags
+git switch -c review-original dashboard-v1-original
+```
+
+To restore the deployed app later, ask to restore the original tag to `main` through a new commit; avoid force-pushing or deleting newer history.
+
+The updated interface adds:
+
+- One-click **Full year**, **Q4 only**, and **Reset all filters** controls.
+- Automatic removal of incompatible downstream filter choices when drilling into a different division/category.
+- A visible active-filter summary, searchable filter hints, and recovery from an empty month selection.
+- A **New here?** guide with shortcuts to SKU review, forecast scenarios and the assistant.
+- Clickable SKU workbench rows that open the selected product's demand history; manual product selection remains available.
+- **−20% / baseline / +20%** forecast scenario buttons and three-month baseline, scenario and estimated-change summaries.
+
+These controls reuse the original analytical functions and preserve the underlying metric definitions and data.

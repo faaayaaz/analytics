@@ -10,6 +10,7 @@ from .kpi_calculations import kpis, monthly_demand, group_summary, executive_ins
 from .abc_xyz_analysis import classify, RECOMMENDATIONS
 from .forecasting import forecast
 from .ai_assistant import answer, FOLLOWUPS
+from .usability import set_scenario
 from .visualizations import show, line, bar
 
 DEFINITIONS = {
@@ -253,8 +254,20 @@ def intelligence(data, months, thresholds):
             .apply(lambda s: s.str.contains(search, case=False, regex=False))
             .any(axis=1)
         ]
-    st.dataframe(
+    st.caption(
+        "Select a row to open that product's demand history below. Search narrows this table; the full segmentation export keeps your dashboard scope."
+    )
+    table_key = (
+        "sku_workbench_"
+        + hashlib.sha256(
+            visible[["product", "sales"]].to_csv(index=False).encode()
+        ).hexdigest()[:12]
+    )
+    event = st.dataframe(
         visible,
+        key=table_key,
+        on_select="rerun",
+        selection_mode="single-row",
         hide_index=True,
         width="stretch",
         column_config={
@@ -268,6 +281,14 @@ def intelligence(data, months, thresholds):
         "sku_segmentation.csv",
         "seg_export",
     )
+    if event.selection.rows:
+        row_index = event.selection.rows[0]
+        token = (table_key, row_index)
+        if st.session_state.get("last_sku_row") != token and row_index < len(visible):
+            st.session_state["detail_product"] = visible.iloc[row_index]["product"]
+            st.session_state["last_sku_row"] = token
+    if st.session_state.get("detail_product") not in table["product"].tolist():
+        st.session_state.pop("detail_product", None)
     sku = st.selectbox(
         "Open product demand history", table["product"].tolist(), key="detail_product"
     )
@@ -304,7 +325,17 @@ def forecasting(data, months):
         "Explainable baseline",
         ["3-month moving average", "Simple exponential smoothing"],
     )
-    scenario = st.slider("Demand scenario growth / decline (%)", -80, 100, 0, 5)
+    st.caption(
+        "Try an assumption, then fine-tune the slider. These scenarios change estimates, not actual demand."
+    )
+    presets = st.columns(3)
+    for column, label, value in zip(
+        presets, ["Decline −20%", "Baseline 0%", "Growth +20%"], [-20, 0, 20]
+    ):
+        column.button(label, on_click=set_scenario, args=(value,), width="stretch")
+    scenario = st.slider(
+        "Demand scenario growth / decline (%)", -80, 100, 0, 5, key="scenario_pct"
+    )
     st.caption(
         "Moving average forecasts recursively extend the last three observations. Exponential smoothing uses fixed α = 0.30 with first-observation initialization. Neither model learns annual seasonality. Signed net-demand estimates are not clipped to zero."
     )
@@ -314,6 +345,20 @@ def forecasting(data, months):
     except ValueError as exc:
         st.info(str(exc))
         return
+    c1, c2, c3 = st.columns(3)
+    baseline_total = out.baseline.sum()
+    scenario_total = out.scenario_estimate.sum()
+    c1.metric("Jan–Mar baseline estimate • EA", f"{baseline_total:,.0f}", border=True)
+    c2.metric(
+        "Jan–Mar scenario estimate • EA",
+        f"{scenario_total:,.0f}",
+        delta=f"{scenario:+d}% assumption",
+        delta_color="off",
+        border=True,
+    )
+    c3.metric(
+        "Estimated change • EA", f"{scenario_total - baseline_total:+,.0f}", border=True
+    )
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(

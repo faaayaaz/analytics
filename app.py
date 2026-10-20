@@ -8,6 +8,7 @@ from modules.data_loader import (
     MONTHS,
 )
 from modules import views
+from modules.usability import reset_filters, set_period, navigate
 
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"
@@ -58,6 +59,7 @@ with st.sidebar:
             "SupplyIQ assistant",
             "Data quality & exports",
         ],
+        key="workspace",
     )
     uploaded = st.file_uploader("Replace assessment workbook", type=["xlsx"])
 try:
@@ -70,11 +72,22 @@ except (ValueError, KeyError, OSError, TypeError) as exc:
 with st.sidebar:
     st.divider()
     st.subheader("Global filters")
+    st.button(
+        "Reset all filters",
+        on_click=reset_filters,
+        width="stretch",
+        key="sidebar_reset",
+    )
+    p1, p2 = st.columns(2)
+    p1.button("Full year", on_click=set_period, args=(0,), width="stretch")
+    p2.button("Q4 only", on_click=set_period, args=(9,), width="stretch")
     month_labels = {d: d.strftime("%b %Y") for d in MONTHS}
+    st.session_state.setdefault("filter_months", MONTHS.tolist())
     selected_months = st.multiselect(
         "Month",
         MONTHS.tolist(),
-        default=MONTHS.tolist(),
+        key="filter_months",
+        help="Select the months to analyze. Full year is recommended for classification and forecasting.",
         format_func=lambda d: month_labels[d],
     )
     selections = {}
@@ -82,12 +95,18 @@ with st.sidebar:
     # Cascading dimensions implement Division → Category → Brand → SKU drilldown.
     for col in DIMENSIONS:
         options = sorted(available[col].unique())
+        # Remove invalid downstream selections when a parent drilldown changes.
+        state_key = "filter_" + col
+        if state_key in st.session_state:
+            st.session_state[state_key] = [
+                v for v in st.session_state[state_key] if v in options
+            ]
         values = st.multiselect(
             col.replace("_", " ").title(),
             options,
-            default=[],
             placeholder="All",
-            key="filter_" + col,
+            key=state_key,
+            help="Type to search. Leave empty to include all available values. Choices follow the filters above.",
         )
         selections[col] = values if values else options
         if values:
@@ -120,6 +139,21 @@ with st.sidebar:
 if not 0 < a < b < 100 or not 0 <= x < y:
     st.error("Set thresholds to 0 < A < B < 100 and 0 ≤ X < Y.")
     st.stop()
+with st.expander("New here? Start with a planning question"):
+    st.write(
+        "1. Choose your scope in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
+    )
+    shortcuts = st.columns(3)
+    for column, label, destination in zip(
+        shortcuts,
+        ["Explore priority SKUs", "Try a demand scenario", "Ask SupplyIQ"],
+        [
+            "SKU & demand intelligence",
+            "Forecasting & scenario lab",
+            "SupplyIQ assistant",
+        ],
+    ):
+        column.button(label, on_click=navigate, args=(destination,), width="stretch")
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
 st.caption(
@@ -129,10 +163,22 @@ st.caption(
 st.caption(
     "Sales-based planning intelligence. Inventory, supplier lead times and purchase orders are not provided. Source values are anonymized, scaled and randomized."
 )
+active = [
+    f"{column.replace('_', ' ').title()}: {', '.join(st.session_state.get('filter_' + column, []))}"
+    for column in DIMENSIONS
+    if st.session_state.get("filter_" + column)
+]
+if active:
+    st.info("Active filters · " + " | ".join(active))
+if len(selected_months) < 12:
+    st.caption(
+        "Partial-year scope: excluded months are not treated as zero demand. Annual average demand remains selected units ÷ 12."
+    )
 if filtered.empty:
     st.info(
         "No transactions match the selected filters. Choose at least one month or broaden the dimension filters."
     )
+    st.button("Restore full-year view", on_click=reset_filters, type="primary")
     if page == "Data quality & exports":
         views.quality(data, report, filtered, selected_months)
     st.stop()

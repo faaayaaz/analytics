@@ -32,3 +32,7 @@ To repeat browser validation with the app running, install optional developer to
 No paid API credentials were available: live LLM authentication/provider responses have not been validated. Optional routing and interpretation were tested with mocks and provider failure with a simulated exception. The keyless analytical assistant was run against real workbook data in unit tests, Streamlit AppTest and Chromium.
 
 Streamlit Community Cloud publication has not been performed. No user-facing public URL, authentication layer, real-time operational data feed, inventory integration, supplier integration or 2025 actual-demand validation is included or implied. The workbook's 11 quantity/financial sign differences are preserved and reported, not corrected by assumption.
+
+## Usability update regression
+
+The original version was preserved remotely as `dashboard-v1-original` at `c7d5a45` before editing. After the usability update, the full automated suite reports **28 passed**. The additional interaction test verifies Q4 selection, cascading-filter recovery when changing divisions, full filter reset, guided navigation, +20%/baseline scenario buttons and empty-scope recovery. The five-page Chromium smoke test, Plotly interactions and downloads also pass against the updated app. A real click on the searched P001 workbench row was verified to select P001 in the demand-history control.

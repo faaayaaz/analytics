@@ -27,7 +27,11 @@ def test_all_pages_and_filters():
             app.selectbox[0].set_value("Simple exponential smoothing").run()
             assert not app.exception
         if page == "SupplyIQ assistant":
-            app.button[-1].click().run()
+            next(
+                button
+                for button in app.button
+                if button.label == "Analyze selected question"
+            ).click().run()
             assert not app.exception
             assert len(app.chat_message) == 2
     app.sidebar.radio[0].set_value("Executive overview").run()
@@ -37,3 +41,36 @@ def test_all_pages_and_filters():
     app.sidebar.multiselect[0].set_value([]).run()
     assert not app.exception
     assert any("No transactions" in x.value for x in app.info)
+
+
+def test_usability_shortcuts_and_filter_recovery():
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
+
+    def click(label):
+        next(button for button in app.button if button.label == label).click().run()
+        assert not app.exception
+
+    click("Q4 only")
+    assert len(app.multiselect(key="filter_months").value) == 3
+    app.multiselect(key="filter_division").set_value(["Food"]).run()
+    category = app.multiselect(key="filter_category").options[0]
+    app.multiselect(key="filter_category").set_value([category]).run()
+    app.multiselect(key="filter_division").set_value(["Durable Goods"]).run()
+    assert not app.exception
+    assert app.multiselect(key="filter_category").value == []
+    click("Reset all filters")
+    assert len(app.multiselect(key="filter_months").value) == 12
+    assert app.multiselect(key="filter_division").value == []
+    assert "441,894,325" in app.metric[0].value
+    click("Try a demand scenario")
+    assert app.radio(key="workspace").value == "Forecasting & scenario lab"
+    click("Growth +20%")
+    assert app.slider(key="scenario_pct").value == 20
+    assert float(app.metric[2].value.replace(",", "")) > 0
+    click("Baseline 0%")
+    assert app.slider(key="scenario_pct").value == 0
+    assert app.metric[2].value == "+0"
+    app.sidebar.radio[0].set_value("Executive overview").run()
+    app.multiselect(key="filter_months").set_value([]).run()
+    click("Restore full-year view")
+    assert "441,894,325" in app.metric[0].value

@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 with sync_playwright() as p:
     browser = p.chromium.launch(
@@ -13,6 +13,7 @@ with sync_playwright() as p:
     page.get_by_text("Executive overview", exact=True).last.wait_for(timeout=90000)
     page.locator('[data-testid="stMetricValue"]').first.wait_for(timeout=90000)
     page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
+    page.locator(".js-plotly-plot").nth(6).wait_for(timeout=30000)
     assert page.locator(".js-plotly-plot").count() >= 7
     # Exercise real Plotly hover and built-in interaction controls.
     plot = page.locator(".js-plotly-plot").first
@@ -25,6 +26,19 @@ with sync_playwright() as p:
     page.get_by_text("SKU planning workbench", exact=True).wait_for(timeout=30000)
     page.get_by_label("Search product, brand or category").fill("P001")
     page.get_by_label("Search product, brand or category").press("Enter")
+    grid = page.locator('[data-testid="stDataFrame"]').nth(2)
+    # Search is applied on Enter. Wait until the product selector is available after rerun.
+    page.get_by_role("combobox", name="Open product demand history").wait_for(
+        timeout=30000
+    )
+    page.wait_for_function(
+        "() => {const grids = document.querySelectorAll('[data-testid=stDataFrame]'); const canvas = grids[2]?.querySelector('canvas'); return canvas && canvas.height <= 100;}",
+        timeout=30000,
+    )
+    grid.locator("canvas").first.click(position={"x": 18, "y": 53}, force=True)
+    expect(
+        page.get_by_role("combobox", name="Open product demand history")
+    ).to_have_value("P001", timeout=30000)
     with page.expect_download(timeout=30000) as event:
         page.get_by_role("button", name="Download ABC–XYZ & planning signals").click()
     download = event.value
