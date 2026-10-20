@@ -8,7 +8,8 @@ from modules.data_loader import (
     MONTHS,
 )
 from modules import views
-from modules.usability import reset_filters, set_period, navigate, open_assistant
+from modules.usability import reset_filters, set_period, navigate
+from modules.assistant_actions import open_assistant
 
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"

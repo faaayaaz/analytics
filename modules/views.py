@@ -10,7 +10,8 @@ from .kpi_calculations import kpis, monthly_demand, group_summary, executive_ins
 from .abc_xyz_analysis import classify, RECOMMENDATIONS
 from .forecasting import forecast
 from .ai_assistant import answer, FOLLOWUPS
-from .usability import set_scenario, queue_question
+from .usability import set_scenario
+from .assistant_actions import queue_question
 from .theme import focus_metric
 from .presentation import display_table
 from .visualizations import show, line, bar

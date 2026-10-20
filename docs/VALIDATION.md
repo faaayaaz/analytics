@@ -56,3 +56,7 @@ Original KPI names, graph-axis labels, table column identifiers, forecast error 
 ## SupplyIQ interaction buttons
 
 The full suite reports **32 passed**. A new Streamlit interaction test opens a summary from a Food-filtered dashboard, verifies the AED 193,130,712.74 result, runs a quick top-SKU question and monthly-demand follow-up, confirms that rerunning does not duplicate questions, and reopens the assistant while preserving the current conversation. Browser checks also open the assistant using its new dashboard button and execute the Demand variability quick question, alongside the existing chart, table, filter and CSV checks.
+
+## Assistant import compatibility fix
+
+Assistant callbacks now live in `modules/assistant_actions.py`. The app no longer imports `open_assistant` or `queue_question` from the existing filter-helper module. A regression test supplies a simulated older `modules.usability` module without those functions, then checks application startup and the dashboard's assistant summary action. The full suite reports **33 passed**. This verifies the code path locally; the live Streamlit Cloud instance must load the new revision before its deployed state can be confirmed.
