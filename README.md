@@ -105,3 +105,9 @@ The updated interface adds:
 - **−20% / baseline / +20%** forecast scenario buttons and three-month baseline, scenario and estimated-change summaries.
 
 These controls reuse the original analytical functions and preserve the underlying metric definitions and data.
+
+### Visual UI refresh
+
+The interface now includes interactive KPI cards with monthly sparklines and a focused chart, line/area chart switching, and three executive tabs: **Performance studio**, **Business mix**, and **Growth & insights**. Cards, navigation and controls have hover, selected and keyboard-focus states; insight cards and coordinated tooltips improve visual scanning. Layouts adapt to narrow screens, and decorative motion respects the operating system's reduced-motion setting.
+
+The version immediately before this visual refresh is preserved as **`dashboard-v2-before-ui`**. The earliest original remains available as **`dashboard-v1-original`**. Both are GitHub tags; restoring a prior version can be done in a new commit without erasing history.

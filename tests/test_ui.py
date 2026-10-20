@@ -74,3 +74,21 @@ def test_usability_shortcuts_and_filter_recovery():
     app.multiselect(key="filter_months").set_value([]).run()
     click("Restore full-year view")
     assert "441,894,325" in app.metric[0].value
+
+
+def test_visual_metric_exploration():
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
+    assert not app.exception
+    assert [tab.label for tab in app.tabs] == [
+        "Performance studio",
+        "Business mix",
+        "Growth & insights",
+    ]
+    app.button(key="focus_1").click().run()
+    assert not app.exception
+    assert app.session_state["focus_metric"] == "Net Units Sold"
+    assert any(heading.value == "Net Units Sold" for heading in app.subheader)
+    assert app.button(key="focus_1").label == "Viewing trend"
+    app.button(key="focus_0").click().run()
+    assert not app.exception
+    assert "441,894,325" in app.metric[0].value

@@ -13,8 +13,8 @@ with sync_playwright() as p:
     page.get_by_text("Executive overview", exact=True).last.wait_for(timeout=90000)
     page.locator('[data-testid="stMetricValue"]').first.wait_for(timeout=90000)
     page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
-    page.locator(".js-plotly-plot").nth(6).wait_for(timeout=30000)
-    assert page.locator(".js-plotly-plot").count() >= 7
+    page.locator(".js-plotly-plot:visible").nth(2).wait_for(timeout=30000)
+    assert page.locator(".js-plotly-plot:visible").count() >= 3
     # Exercise real Plotly hover and built-in interaction controls.
     plot = page.locator(".js-plotly-plot").first
     plot.hover()
@@ -22,6 +22,18 @@ with sync_playwright() as p:
     page.get_by_role("button", name="Autoscale").first.click()
     plot.locator(".scatterlayer .point").first.hover(force=True)
     assert plot.locator(".hoverlayer").count() == 1
+    page.get_by_role("button", name="Explore trend", exact=True).nth(0).click()
+    page.get_by_role("heading", name="Net Units Sold", exact=True).wait_for(
+        timeout=30000
+    )
+    page.get_by_text("Line", exact=True).click()
+    page.get_by_role("tab", name="Business mix", exact=True).click()
+    page.locator(".js-plotly-plot:visible").nth(3).wait_for(timeout=30000)
+    page.get_by_role("tab", name="Growth & insights", exact=True).click()
+    page.get_by_role("heading", name="Executive insights", exact=True).wait_for(
+        timeout=30000
+    )
+    page.get_by_role("tab", name="Performance studio", exact=True).click()
     page.get_by_text("SKU & demand intelligence", exact=True).first.click()
     page.get_by_text("SKU planning workbench", exact=True).wait_for(timeout=30000)
     page.get_by_label("Search product, brand or category").fill("P001")

@@ -13,31 +13,11 @@ from modules.usability import reset_filters, set_period, navigate
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"
 )
+from modules.theme import apply_theme
+
+apply_theme()
 st.markdown(
-    """<style>
-.stApp {background: #f4f7fb;}
-[data-testid="stSidebar"] {background: #12283f;}
-[data-testid="stSidebar"] * {color: #eef6fc;}
-[data-testid="stSidebar"] input {color: #162941;}
-[data-testid="stSidebar"] [data-testid="stFileUploader"] * {color: #162941;}
-[data-testid="stSidebar"] [data-baseweb="select"] * {color: #162941;}
-[data-testid="stSidebar"] [data-baseweb="tag"] * {color: #ffffff;}
-[data-testid="stSidebar"] [data-testid="stNumberInput"] input {color: #162941;}
-[data-testid="stMetricLabel"] p {white-space: normal;}
-[data-testid="stSidebar"] [data-baseweb="tag"] {background:#186b75;}
-h1,h2,h3 {letter-spacing:-.025em;}
-[data-testid="stMetric"] {background:white; border-top:3px solid #009e98; padding:18px; border-radius:10px;}
-[data-testid="stMetricLabel"] {font-size:13px;}
-[data-testid="stMetricValue"] {font-size:27px;}
-.block-container {padding-top:2rem; padding-bottom:2rem; max-width:1600px;}
-.hero {background:linear-gradient(115deg,#12283f,#1c4559);padding:28px 32px;border-radius:14px;margin-bottom:22px;color:white;}
-.hero h1 {color:white;font-size:30px;padding:0;margin:0 0 8px 0;}
-.hero p {color:#b8deda;margin:0;font-size:15px;}
-</style>""",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<div class="hero"><h1>Consumer Supply Planning Intelligence</h1><p>Demand Analytics | SKU Prioritization | Forecasting | AI-Powered Insights</p></div>',
+    '<div class="hero"><div class="eyebrow">SUPPLYIQ / CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1><p>Demand Analytics | SKU Prioritization | Forecasting | AI-Powered Insights</p></div>',
     unsafe_allow_html=True,
 )
 

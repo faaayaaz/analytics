@@ -13,7 +13,11 @@ def show(fig, key=None):
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         legend_title_text="",
-        hovermode="closest",
+        hovermode="x unified"
+        if any(t.type == "scatter" for t in fig.data)
+        else "closest",
+        hoverlabel=dict(bgcolor="#132c43", font_color="white", bordercolor="#009e98"),
+        transition=dict(duration=250),
     )
     st.plotly_chart(fig, width="stretch", key=key, config={"displaylogo": False})
 

@@ -36,3 +36,7 @@ Streamlit Community Cloud publication has not been performed. No user-facing pub
 ## Usability update regression
 
 The original version was preserved remotely as `dashboard-v1-original` at `c7d5a45` before editing. After the usability update, the full automated suite reports **28 passed**. The additional interaction test verifies Q4 selection, cascading-filter recovery when changing divisions, full filter reset, guided navigation, +20%/baseline scenario buttons and empty-scope recovery. The five-page Chromium smoke test, Plotly interactions and downloads also pass against the updated app. A real click on the searched P001 workbench row was verified to select P001 in the demand-history control.
+
+## Visual UI refresh
+
+The version before the visual refresh is preserved remotely as `dashboard-v2-before-ui`. The updated suite reports **29 passed**, including an additional test for interactive KPI focus and tab presence. Chromium checks additionally click a KPI trend action, switch the main chart to Line, open Business mix and Growth & insights tabs, and then exercise the existing five-page, SKU selection and download workflow. Desktop and 390-pixel mobile layouts render without main-content horizontal overflow. Source totals and analytical definitions are unchanged.
