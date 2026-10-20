@@ -74,7 +74,7 @@ def display_table(data, **kwargs):
             )
         )
     config = {
-        column: st.column_config.Column(label)
+        column: st.column_config.Column(column, help=label)
         for column, label in COLUMN_LABELS.items()
         if column in data.columns
     }

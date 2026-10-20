@@ -29,7 +29,7 @@ def cached_load(payload):
 
 with st.sidebar:
     st.title("◈ SupplyIQ")
-    st.caption("SALES & DEMAND DASHBOARD")
+    st.caption("CONSUMER PLANNING CONTROL TOWER")
     page = st.radio(
         "Workspace",
         [
@@ -103,28 +103,28 @@ with st.sidebar:
             "Choose the sales cutoffs for ABC and the demand-change scores for XYZ."
         )
         a = st.number_input(
-            "A group sales cutoff (%)",
+            "A cumulative revenue %",
             min_value=1.0,
             max_value=98.0,
             value=80.0,
             step=1.0,
         )
         b = st.number_input(
-            "B group sales cutoff (%)",
+            "B cumulative revenue %",
             min_value=2.0,
             max_value=99.0,
             value=95.0,
             step=1.0,
         )
         x = st.number_input(
-            "X group maximum change score (CV)",
+            "X maximum CV",
             min_value=0.0,
             max_value=5.0,
             value=0.5,
             step=0.1,
         )
         y = st.number_input(
-            "Y group maximum change score (CV)",
+            "Y maximum CV",
             min_value=0.1,
             max_value=10.0,
             value=1.0,
@@ -152,7 +152,7 @@ with st.expander("New here? Start with a planning question"):
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
 st.caption(
-    f"SELECTED DATA  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
+    f"SCOPE  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
     + ("uploaded workbook" if uploaded else "assessment workbook")
 )
 st.caption(

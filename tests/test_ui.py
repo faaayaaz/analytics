@@ -64,10 +64,10 @@ def test_usability_shortcuts_and_filter_recovery():
     assert "441,894,325" in app.metric[0].value
     click("Try a demand scenario")
     assert app.radio(key="workspace").value == "Forecasting & scenario lab"
-    click("20% higher")
+    click("Growth +20%")
     assert app.slider(key="scenario_pct").value == 20
     assert float(app.metric[2].value.replace(",", "")) > 0
-    click("No change 0%")
+    click("Baseline 0%")
     assert app.slider(key="scenario_pct").value == 0
     assert app.metric[2].value == "+0"
     app.sidebar.radio[0].set_value("Executive overview").run()
@@ -87,7 +87,7 @@ def test_visual_metric_exploration():
     app.button(key="focus_1").click().run()
     assert not app.exception
     assert app.session_state["focus_metric"] == "Net Units Sold"
-    assert any(heading.value == "Units sold minus returns" for heading in app.subheader)
+    assert any(heading.value == "Net Units Sold" for heading in app.subheader)
     assert app.button(key="focus_1").label == "Viewing trend"
     app.button(key="focus_0").click().run()
     assert not app.exception

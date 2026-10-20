@@ -15,15 +15,6 @@ from .theme import focus_metric
 from .presentation import display_table
 from .visualizations import show, line, bar
 
-KPI_LABELS = {
-    "Net Sales (AED)": "Sales after returns (AED)",
-    "Net Units Sold": "Units sold minus returns",
-    "MoM Demand Growth %": "Change from last month (%)",
-    "Active SKUs": "Products with sales or returns",
-    "Average Monthly Net Demand": "Monthly average (units ÷ 12)",
-    "Negative Transaction Quantity Rate %": "Returned/credited units (%)",
-}
-
 DEFINITIONS = {
     "Net Sales (AED)": "Sales after returns and credit notes have been deducted.",
     "Net Units Sold": "Units sold minus units returned. EA means individual units; pack sizes may differ between products.",
@@ -77,7 +68,7 @@ def overview(data, months):
                 )
                 spark = history[name].dropna().tolist()
                 st.metric(
-                    KPI_LABELS.get(name, name),
+                    name,
                     display,
                     help=DEFINITIONS[name],
                     chart_data=spark or None,
@@ -100,7 +91,7 @@ def overview(data, months):
     with performance:
         heading, control = st.columns([3, 1])
         with heading:
-            st.subheader(KPI_LABELS.get(focused, focused))
+            st.subheader(focused)
             st.caption("Month-by-month view of your selected data")
         with control:
             style = st.segmented_control(
@@ -116,7 +107,7 @@ def overview(data, months):
                 y=focused,
                 markers=True,
                 title="Selected KPI • monthly history",
-                labels={focused: KPI_LABELS.get(focused, focused), "month": "Month"},
+                labels={focused: focused, "month": "Month"},
             )
             if style == "Area"
             else line(history, "month", focused, "Selected KPI • monthly history")
@@ -261,7 +252,7 @@ def intelligence(data, months, thresholds):
                 go.Scatter(
                     x=eligible["product"],
                     y=eligible.cumulative_pct,
-                    name="Running share of positive sales (%)",
+                    name="Cumulative eligible revenue %",
                     line_color="#173454",
                 ),
                 secondary_y=True,
@@ -311,7 +302,7 @@ def intelligence(data, months, thresholds):
             width="stretch",
         )
     with r:
-        st.subheader("Products to review")
+        st.subheader("Smart attention signals")
         alerts = table.loc[
             table.planning_priority.str.contains(
                 "Investigate|Validate|negative|nonpositive", case=False
@@ -353,12 +344,8 @@ def intelligence(data, months, thresholds):
         hide_index=True,
         width="stretch",
         column_config={
-            "demand_cv": st.column_config.NumberColumn(
-                "Demand consistency score (CV)", format="%.3f"
-            ),
-            "sales": st.column_config.NumberColumn(
-                "Sales after returns (AED)", format="%.2f"
-            ),
+            "demand_cv": st.column_config.NumberColumn(format="%.3f"),
+            "sales": st.column_config.NumberColumn(format="%.2f"),
         },
     )
     csv_download(
@@ -398,26 +385,21 @@ def forecasting(data, months):
         "These forecasts are examples, not quantities to order. We have only one year of adjusted assessment data, so we cannot confirm patterns that repeat each year. Current stock, supplier delivery times and customer service targets are not provided."
     )
     grain = st.radio(
-        "What would you like to forecast?",
+        "Forecast scope",
         ["Selected portfolio", "Category", "SKU"],
         horizontal=True,
-        format_func=lambda value: {
-            "Selected portfolio": "All selected products",
-            "Category": "One category",
-            "SKU": "One product",
-        }[value],
     )
     subset = data
     if grain != "Selected portfolio":
         col = "category" if grain == "Category" else "product"
         entity = st.selectbox(
-            "Choose a category or product",
+            "Forecast entity",
             sorted(data[col].unique()),
             key="forecast_entity_" + col,
         )
         subset = data.loc[data[col] == entity]
     method = st.selectbox(
-        "Forecast method",
+        "Explainable baseline",
         ["3-month moving average", "Simple exponential smoothing"],
     )
     st.caption(
@@ -425,7 +407,7 @@ def forecasting(data, months):
     )
     presets = st.columns(3)
     for column, label, value in zip(
-        presets, ["20% lower", "No change 0%", "20% higher"], [-20, 0, 20]
+        presets, ["Decline −20%", "Baseline 0%", "Growth +20%"], [-20, 0, 20]
     ):
         column.button(label, on_click=set_scenario, args=(value,), width="stretch")
     scenario = st.slider(
@@ -443,18 +425,16 @@ def forecasting(data, months):
     c1, c2, c3 = st.columns(3)
     baseline_total = out.baseline.sum()
     scenario_total = out.scenario_estimate.sum()
-    c1.metric(
-        "Jan–Mar original forecast • units", f"{baseline_total:,.0f}", border=True
-    )
+    c1.metric("Jan–Mar baseline estimate • EA", f"{baseline_total:,.0f}", border=True)
     c2.metric(
-        "Jan–Mar forecast with your change • units",
+        "Jan–Mar scenario estimate • EA",
         f"{scenario_total:,.0f}",
         delta=f"{scenario:+d}% assumption",
         delta_color="off",
         border=True,
     )
     c3.metric(
-        "Estimated change • units",
+        "Estimated change • EA",
         f"{scenario_total - baseline_total:+,.0f}",
         border=True,
     )
@@ -469,7 +449,7 @@ def forecasting(data, months):
         )
     )
     for col, label, color in [
-        ("baseline", "Original forecast", "#009e98"),
+        ("baseline", "Baseline estimate", "#009e98"),
         ("scenario_estimate", f"Scenario estimate ({scenario:+d}%)", "#e4a740"),
     ]:
         fig.add_trace(
@@ -493,12 +473,6 @@ def forecasting(data, months):
     show(fig)
     cols = st.columns(4)
     for col, (name, value) in zip(cols, list(metrics.items())[:4]):
-        labels = {
-            "MAE": "Average error in units (MAE)",
-            "WAPE %": "Overall error % (WAPE)",
-            "Bias %": "Estimate too high/low (%)",
-            "Mean bias (units)": "Average high/low difference (units)",
-        }
         help_text = {
             "MAE": "The average size of the gap between forecast and actual units. Smaller is better.",
             "WAPE %": "Total absolute error divided by total absolute actual units, as a percentage. Smaller is better. N/A means actual units add up to zero after taking absolute values.",
@@ -506,7 +480,7 @@ def forecasting(data, months):
             "Mean bias (units)": "Average forecast minus actual units. Positive means too high; negative means too low.",
         }
         col.metric(
-            labels.get(name, name),
+            name,
             "N/A" if pd.isna(value) else f"{value:,.2f}",
             border=True,
             help=help_text.get(name),
@@ -552,7 +526,7 @@ def assistant(data, months, thresholds, scope):
     except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
         pass
     enabled = st.toggle(
-        "Use the optional AI service to understand questions",
+        "Use configured LLM for question interpretation",
         value=False,
         disabled=not bool(key),
     )
@@ -647,18 +621,18 @@ def assistant(data, months, thresholds, scope):
 
 
 def quality(data, report, filtered, months):
-    st.header("Data checks & totals")
+    st.header("Data quality & reconciliation")
     st.success(
         "Sales records match the product and customer lists. Row counts and totals are unchanged."
         if report["reconciled"]
         else "Some totals do not match and need checking."
     )
     st.caption(
-        "File checks cover the whole workbook. Your filtered results are shown separately."
+        "Workbook validation cover the whole workbook. Your filtered results are shown separately."
     )
     l, r = st.columns(2)
     with l:
-        st.subheader("File checks")
+        st.subheader("Workbook validation")
         rows = [
             {"Check": k.replace("_", " ").title(), "Result": str(v)}
             for k, v in report.items()
@@ -666,7 +640,7 @@ def quality(data, report, filtered, months):
         ]
         display_table(pd.DataFrame(rows), hide_index=True, width="stretch")
     with r:
-        st.subheader("About the source data")
+        st.subheader("Source business context")
         if report["sign_mismatch_rows"]:
             st.warning(
                 f"{report['sign_mismatch_rows']} rows have opposite signs between quantity and sales or cost. Values are preserved; check these credit or cost adjustments with the person who provided the data."
@@ -675,12 +649,12 @@ def quality(data, report, filtered, months):
         st.info(
             "Negative values are kept as returns or credit notes. Repeated rows are reported, not deleted. If product or customer details do not match, dates or numbers are invalid, or units of measure differ, the app stops and asks for the file to be corrected."
         )
-        st.subheader("Your selected data")
+        st.subheader("Filtered scope")
         st.write(
             f"{len(filtered):,} rows · {len(months)} selected months · {filtered['product'].nunique()} products"
         )
         display_table(pd.DataFrame([kpis(filtered, months)]), hide_index=True)
-    st.subheader("Sales and returns • your selected data")
+    st.subheader("Positive sales versus negative transactions • filtered scope")
     breakdown = pd.DataFrame(
         [
             {

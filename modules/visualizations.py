@@ -7,17 +7,17 @@ COLORS = ["#009e98", "#173454", "#4b82b8", "#efb44f", "#a178b6", "#db6b67"]
 LABELS = {
     "month": "Month",
     "sales": "Net sales (AED)",
-    "quantity": "Units sold minus returns (EA)",
+    "quantity": "Net demand (EA)",
     "cost": "Cost of sales (AED)",
     "product": "Product code",
     "category": "Category",
     "division": "Division",
     "channel": "Sales channel",
-    "demand_cv": "Demand consistency score (CV)",
+    "demand_cv": "Demand CV",
     "net_sales_aed": "Net sales (AED)",
-    "net_units": "Units sold minus returns (EA)",
+    "net_units": "Net demand (EA)",
     "growth_pct": "Demand growth (%)",
-    "abc": "Sales value group (ABC)",
+    "abc": "ABC revenue class",
     "SKUs": "Products",
 }
 
@@ -85,7 +85,7 @@ def prepare_chart(fig, help_text=None):
     title = (fig.layout.title.text or "").lower()
     if "abc–xyz" in title:
         fig.update_traces(
-            hovertemplate="Sales value group (ABC): %{y}<br>Demand consistency group (XYZ): %{x}<br>Products: %{z:,.0f}<extra></extra>"
+            hovertemplate="ABC class: %{y}<br>XYZ class: %{x}<br>Products: %{z:,.0f}<extra></extra>"
         )
     elif "adjacent-month" in title:
         fig.update_traces(

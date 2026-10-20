@@ -48,3 +48,7 @@ The automated suite reports **31 passed**, adding checks for chart-specific guid
 ## Plain-language update
 
 The full automated suite reports **31 passed** after simplifying the wording. Table headings and review messages are translated for display without changing the underlying classification codes, calculations or CSV column identifiers. Browser checks cover the renamed scenario buttons, simpler assistant output, chart help and Data checks & totals page, as well as the existing filter, SKU selection and download interactions.
+
+## Technical-label clarification
+
+Original KPI names, graph-axis labels, table column identifiers, forecast error names and control labels are restored. Plain-language explanations, hover help, recommendations and the glossary remain. Calculations and downloaded data are unchanged. The regression tests verify the original KPI heading and scenario labels alongside the simpler explanation tooltips.

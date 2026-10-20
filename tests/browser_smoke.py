@@ -28,7 +28,7 @@ with sync_playwright() as p:
     plot.locator(".scatterlayer .point").first.hover(force=True)
     assert plot.locator(".hoverlayer").count() == 1
     page.get_by_role("button", name="Explore trend", exact=True).nth(0).click()
-    page.get_by_role("heading", name="Units sold minus returns", exact=True).wait_for(
+    page.get_by_role("heading", name="Net Units Sold", exact=True).wait_for(
         timeout=30000
     )
     page.get_by_text("Line", exact=True).click()
@@ -81,7 +81,9 @@ with sync_playwright() as p:
         timeout=30000
     )
     page.get_by_text("Data quality & exports", exact=True).first.click()
-    page.get_by_text("Data checks & totals", exact=True).wait_for(timeout=30000)
+    page.get_by_text("Data quality & reconciliation", exact=True).wait_for(
+        timeout=30000
+    )
     with page.expect_download(timeout=30000) as event:
         page.get_by_role("button", name="Download filtered transactions").click()
     event.value.save_as("/tmp/filtered_sales.csv")
