@@ -18,7 +18,7 @@ with sync_playwright() as p:
     # Verify the accessible chart-explanation tooltip.
     page.get_by_role("button", name="Help", exact=True).first.hover()
     expect(page.get_by_role("tooltip")).to_contain_text(
-        "Sum of signed net sales values", timeout=10000
+        "Sales after returns and credit notes", timeout=10000
     )
     # Exercise real Plotly hover and built-in interaction controls.
     plot = page.locator(".js-plotly-plot").first
@@ -28,7 +28,7 @@ with sync_playwright() as p:
     plot.locator(".scatterlayer .point").first.hover(force=True)
     assert plot.locator(".hoverlayer").count() == 1
     page.get_by_role("button", name="Explore trend", exact=True).nth(0).click()
-    page.get_by_role("heading", name="Net Units Sold", exact=True).wait_for(
+    page.get_by_role("heading", name="Units sold minus returns", exact=True).wait_for(
         timeout=30000
     )
     page.get_by_text("Line", exact=True).click()
@@ -77,13 +77,11 @@ with sync_playwright() as p:
     page.get_by_text("SupplyIQ assistant", exact=True).first.click()
     page.get_by_role("button", name="Analyze selected question").wait_for(timeout=30000)
     page.get_by_role("button", name="Analyze selected question").click()
-    page.get_by_text("Top 10 SKUs by signed net sales", exact=False).wait_for(
+    page.get_by_text("Top 10 products by sales after returns", exact=False).wait_for(
         timeout=30000
     )
     page.get_by_text("Data quality & exports", exact=True).first.click()
-    page.get_by_text("Data quality & reconciliation", exact=True).wait_for(
-        timeout=30000
-    )
+    page.get_by_text("Data checks & totals", exact=True).wait_for(timeout=30000)
     with page.expect_download(timeout=30000) as event:
         page.get_by_role("button", name="Download filtered transactions").click()
     event.value.save_as("/tmp/filtered_sales.csv")

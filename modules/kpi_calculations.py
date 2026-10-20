@@ -83,7 +83,7 @@ def executive_insights(data, months):
     )
     top = group_summary(data, "product").head(10)
     lines.append(
-        f"The top 10 SKUs account for {ratio(top.sales.sum(), data.sales.sum(), True):.1f}% of selected net revenue; review this concentration when planning demand exceptions."
+        f"The top 10 products make up {ratio(top.sales.sum(), data.sales.sum(), True):.1f}% of sales after returns in your selection. Check how much the plan depends on these products."
     )
     m = monthly_demand(data, sorted(months))
     valid = []
@@ -95,9 +95,9 @@ def executive_insights(data, months):
     if valid:
         i = max(valid, key=lambda j: abs(m.growth_pct.iloc[j]))
         lines.append(
-            f"Largest adjacent-month demand change: {m.month.iloc[i]:%b %Y}, {m.growth_pct.iloc[i]:+.1f}% versus {m.month.iloc[i - 1]:%b} ({m.quantity.iloc[i]:,.0f} net units). Investigate customer and SKU drivers before adjusting assumptions."
+            f"Largest change from the previous month: {m.month.iloc[i]:%b %Y}, {m.growth_pct.iloc[i]:+.1f}% versus {m.month.iloc[i - 1]:%b} ({m.quantity.iloc[i]:,.0f} units after returns). Check which customers and products caused the change before updating the plan."
         )
     lines.append(
-        f"Negative quantities equal {k['Negative Transaction Quantity Rate %']:.2f}% of positive units. Review credits separately from gross demand."
+        f"Returned or credited units equal {k['Negative Transaction Quantity Rate %']:.2f}% of positive units sold. Review credit notes separately to understand the demand behind the total."
     )
     return lines

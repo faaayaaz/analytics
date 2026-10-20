@@ -84,13 +84,13 @@ def priority(row):
 
 
 RECOMMENDATIONS = {
-    "AX": "Maintain a regular demand review cadence; validate promotions and customer commitments.",
-    "AY": "Review demand drivers and forecast exceptions each month.",
-    "AZ": "Prioritize customer-level volatility investigation and scenario planning.",
-    "BX": "Use routine demand reviews and simple baseline forecasting.",
-    "BY": "Review moderate variability and changes in customer mix.",
-    "BZ": "Investigate intermittent buying and large orders before changing plans.",
-    "CX": "Review assortment economics and maintain proportionate planning effort.",
-    "CY": "Review contribution versus demand variability with commercial teams.",
-    "CZ": "Validate assortment relevance, credits and intermittent transactions.",
+    "AX": "Review demand regularly. Check planned promotions and confirmed customer orders.",
+    "AY": "Each month, check why demand changed and where the forecast missed actual sales.",
+    "AZ": "Start by checking which customers cause large demand swings. Compare a few possible demand changes.",
+    "BX": "Review demand regularly and use a simple forecast as a starting point.",
+    "BY": "Check month-to-month changes and whether different customers are buying.",
+    "BZ": "Check occasional purchases and unusually large orders before changing the plan.",
+    "CX": "Review whether keeping these products makes business sense. Match review effort to their sales value.",
+    "CY": "Discuss the sales value and uneven demand with the sales team.",
+    "CZ": "Check whether customers still need these products. Review credit notes and occasional purchases.",
 }

@@ -7,17 +7,17 @@ COLORS = ["#009e98", "#173454", "#4b82b8", "#efb44f", "#a178b6", "#db6b67"]
 LABELS = {
     "month": "Month",
     "sales": "Net sales (AED)",
-    "quantity": "Net demand (EA)",
+    "quantity": "Units sold minus returns (EA)",
     "cost": "Cost of sales (AED)",
     "product": "Product code",
     "category": "Category",
     "division": "Division",
     "channel": "Sales channel",
-    "demand_cv": "Demand CV",
+    "demand_cv": "Demand consistency score (CV)",
     "net_sales_aed": "Net sales (AED)",
-    "net_units": "Net demand (EA)",
+    "net_units": "Units sold minus returns (EA)",
     "growth_pct": "Demand growth (%)",
-    "abc": "ABC revenue class",
+    "abc": "Sales value group (ABC)",
     "SKUs": "Products",
 }
 
@@ -27,57 +27,57 @@ def chart_guide(fig):
     guides = [
         (
             "division sales and gross margin",
-            "Bars use the left axis for signed net sales in AED. The line uses the right axis for gross margin: (sales − cost) / sales × 100. Compare revenue scale and profitability separately.",
+            "Bars show sales after returns in AED, using the left axis. The line shows gross margin on the right axis: the percentage of sales left after product costs. The two axes use different units.",
         ),
         (
             "pareto",
-            "Products are sorted by positive net revenue. Bars show AED sales on the left axis; the line shows cumulative eligible revenue percentage on the right. Boundary-crossing products stay in their starting ABC class. Nonpositive-revenue products are excluded.",
+            "Products run from highest to lowest sales. Bars show sales in AED on the left axis. The line on the right shows how much of total positive sales these products add up to. Products with zero or negative sales are left out. A product crossing an ABC cutoff stays in its starting group.",
         ),
         (
             "abc distribution",
-            "Each bar counts products in an ABC revenue class. A and B use your configured cumulative revenue boundaries; C is the remainder. N means nonpositive revenue, outside the standard ABC ranking.",
+            "Each bar counts products in a sales value group. A contains the leading sales contributors, B the next group, and C the rest. Your settings control the cutoffs. N means sales are zero or negative, so the product is not ranked.",
         ),
         (
             "abc–xyz",
-            "Rows are revenue classes A/B/C; columns are demand variability X/Y/Z. Each cell counts products. Darker cells contain more products, not greater inventory risk. N classifications are excluded. Use the segment selector below for recommendations.",
+            "Rows group products by sales value: A = leading contributors, B = the next group, C = the rest. Columns show how steady demand is: X = steady, Y = some changes, Z = large changes. Each box counts products; darker means more products, not higher stock risk. N products are left out. Choose a group below to see advice.",
         ),
         (
             "adjacent-month",
-            "Rows are divisions and columns are months. Each cell shows net-demand growth versus the preceding calendar month. Green indicates growth and red indicates decline; neither alone proves good or bad performance. Blank cells mean no valid positive prior denominator or an excluded prior month.",
+            "Rows are divisions and columns are months. Each box shows the percentage change in units sold minus returns from the previous month. Green means an increase; red means a decrease. A blank means the previous month was not selected or had zero or negative units. A colour alone does not tell you whether performance is good or bad.",
         ),
         (
             "historical net demand",
-            "The solid line is observed 2024 net demand in EA. Dashed lines are January–March 2025 baseline and scenario estimates. Hover to compare values; click a legend item to hide or restore a series. Estimates are not purchase requirements.",
+            "The solid line shows actual 2024 units sold minus returns. Dashed lines estimate January–March 2025 demand: the original forecast and the forecast after your chosen change. EA means individual units. Hover for values; click a line name to hide or show it. These estimates do not tell you how much to order.",
         ),
         (
             "top 10",
-            "Products are ranked by signed net sales in AED within the dashboard filters. Taller bars indicate more revenue, not more units or stock. Hover over each bar for its product and exact sales.",
+            "Products are ordered by sales after returns, using your selected filters. Taller bars mean more sales in AED, not more units or stock. Hover over a bar to see its product and sales value.",
         ),
         (
             "category net sales",
-            "Horizontal bars compare signed net revenue by category in AED. Longer bars mean larger revenue contribution in the selected scope. Returns and credits remain included.",
+            "Bars compare sales after returns by category in AED. Longer bars mean more sales for your selection. Returns and credit notes are deducted.",
         ),
         (
             "channel net revenue",
-            "Bars show signed net sales in AED by customer sales channel. Compare commercial contribution; this is not physical channel inventory or forecast demand.",
+            "Bars show sales after returns in AED for each sales channel. Use them to see which channels bring in more sales. They do not show stock levels or future demand.",
         ),
         (
             "monthly net sales",
-            "Each point is the signed net sales total in AED for an included month. Returns and credits reduce sales. Hover for exact values; use the legend, zoom and reset controls to explore.",
+            "Each point shows sales after returns in AED for a selected month. Returns and credit notes reduce the total. Hover for exact values, or use the zoom and reset buttons to explore.",
         ),
         (
             "monthly net demand",
-            "Each point is the signed quantity total in EA for an included month. Negative transactions reduce net demand. Zero represents no net demand in an included month, not missing inventory. EA does not standardize pack sizes across products.",
+            "Each point shows units sold minus returns for a selected month. EA means individual units; pack sizes may differ between products. Zero means sales and returns add up to zero, not that stock is unavailable.",
         ),
         (
             "verified analytical result",
-            "This chart visualizes the verified assistant result table above. Axis labels identify the measure and unit. Hover for values and compare them with the table; all results respect the dashboard filters.",
+            "This chart shows the calculated results in the assistant table above. Read the axis labels to see what is being measured. Hover for exact values. The chart uses the same filters as the rest of the dashboard.",
         ),
     ]
     for match, description in guides:
         if match in title:
             return description
-    return "Hover over a data point for its exact values. Axis labels show the measure and unit. Click legend entries to hide or restore a series; use zoom and autoscale to explore. All values reflect the selected dashboard scope."
+    return "Hover over a point for its exact value. Axis labels tell you what is measured. Click a name in the chart key to hide or show that line. Use zoom to look closer and Autoscale to fit the chart again. Values follow your dashboard filters."
 
 
 def prepare_chart(fig, help_text=None):
@@ -85,7 +85,7 @@ def prepare_chart(fig, help_text=None):
     title = (fig.layout.title.text or "").lower()
     if "abc–xyz" in title:
         fig.update_traces(
-            hovertemplate="ABC class: %{y}<br>XYZ class: %{x}<br>Products: %{z:,.0f}<extra></extra>"
+            hovertemplate="Sales value group (ABC): %{y}<br>Demand consistency group (XYZ): %{x}<br>Products: %{z:,.0f}<extra></extra>"
         )
     elif "adjacent-month" in title:
         fig.update_traces(

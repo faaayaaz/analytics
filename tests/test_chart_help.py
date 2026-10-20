@@ -22,5 +22,5 @@ def test_matrix_tooltip_and_plain_language_axes():
         "quantity",
         "Monthly net demand • EA",
     )
-    assert fig.layout.yaxis.title.text == "Net demand (EA)"
-    assert "signed quantity" in chart_guide(fig)
+    assert fig.layout.yaxis.title.text == "Units sold minus returns (EA)"
+    assert "units sold minus returns" in chart_guide(fig)

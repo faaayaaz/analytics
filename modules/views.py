@@ -12,17 +12,27 @@ from .forecasting import forecast
 from .ai_assistant import answer, FOLLOWUPS
 from .usability import set_scenario
 from .theme import focus_metric
+from .presentation import display_table
 from .visualizations import show, line, bar
 
+KPI_LABELS = {
+    "Net Sales (AED)": "Sales after returns (AED)",
+    "Net Units Sold": "Units sold minus returns",
+    "MoM Demand Growth %": "Change from last month (%)",
+    "Active SKUs": "Products with sales or returns",
+    "Average Monthly Net Demand": "Monthly average (units ÷ 12)",
+    "Negative Transaction Quantity Rate %": "Returned/credited units (%)",
+}
+
 DEFINITIONS = {
-    "Net Sales (AED)": "Sum of signed net sales values; includes credits and returns.",
-    "Net Units Sold": "Sum of signed quantities in EA. EA does not standardize pack size across products.",
-    "Gross Profit (AED)": "Net sales minus signed cost of sales.",
-    "Gross Margin %": "Gross profit / net sales × 100. N/A when net sales is zero. Negative-sales margins retain the signed formula and require careful interpretation.",
-    "MoM Demand Growth %": "Latest selected month versus the immediately preceding calendar month, only when both are selected and previous demand is positive.",
-    "Active SKUs": "Distinct products with at least one transaction in the selection (including return-only or net-zero products).",
-    "Average Monthly Net Demand": "Selected signed quantity / 12. This is an annualized selected contribution, not a selected-month mean when months are excluded.",
-    "Negative Transaction Quantity Rate %": "Absolute negative quantities / positive quantities × 100. N/A if no positive quantities.",
+    "Net Sales (AED)": "Sales after returns and credit notes have been deducted.",
+    "Net Units Sold": "Units sold minus units returned. EA means individual units; pack sizes may differ between products.",
+    "Gross Profit (AED)": "Sales after returns, minus the cost of those sales.",
+    "Gross Margin %": "The share of sales left after product costs: gross profit ÷ net sales × 100. N/A means it cannot be calculated because sales are zero. Treat percentages based on negative sales with care.",
+    "MoM Demand Growth %": "How much units sold changed from the previous month. Both months must be selected, and the previous month must have more than zero units.",
+    "Active SKUs": "Number of different products with a sale or return in your selection. SKU means a product code.",
+    "Average Monthly Net Demand": "Units sold minus returns, divided by 12. If you select fewer months, this still divides by 12; it is not the average of just those months.",
+    "Negative Transaction Quantity Rate %": "Returned or credited units as a percentage of positive units sold. N/A means there are no positive units to compare with. This is a share of units, not a share of transaction rows.",
 }
 
 
@@ -39,7 +49,7 @@ def csv_download(label, data, name, key):
 def overview(data, months):
     st.header("Executive overview")
     st.caption(
-        "Performance, demand movement and planning attention • every figure reflects the sidebar scope"
+        "See sales, changes in demand and products to review. All figures follow your sidebar filters."
     )
     metrics = kpis(data, months)
     m = monthly_demand(data, sorted(months))
@@ -67,7 +77,7 @@ def overview(data, months):
                 )
                 spark = history[name].dropna().tolist()
                 st.metric(
-                    name,
+                    KPI_LABELS.get(name, name),
                     display,
                     help=DEFINITIONS[name],
                     chart_data=spark or None,
@@ -90,8 +100,8 @@ def overview(data, months):
     with performance:
         heading, control = st.columns([3, 1])
         with heading:
-            st.subheader(focused)
-            st.caption("Monthly view within your selected scope")
+            st.subheader(KPI_LABELS.get(focused, focused))
+            st.caption("Month-by-month view of your selected data")
         with control:
             style = st.segmented_control(
                 "Chart style",
@@ -106,6 +116,7 @@ def overview(data, months):
                 y=focused,
                 markers=True,
                 title="Selected KPI • monthly history",
+                labels={focused: KPI_LABELS.get(focused, focused), "month": "Month"},
             )
             if style == "Area"
             else line(history, "month", focused, "Selected KPI • monthly history")
@@ -115,7 +126,7 @@ def overview(data, months):
             plot,
             key="focused_metric_chart",
             help_text=DEFINITIONS[focused]
-            + " This graph shows that measure separately for each included month. The card above summarizes the full selection. For average monthly net demand, each point is that month’s contribution divided by 12; for growth, only adjacent selected months with a positive prior value are valid.",
+            + " The chart shows each selected month separately. The card above covers the whole selection. Average monthly demand points show each month’s units divided by 12. Growth needs both neighbouring months and more than zero units in the earlier month.",
         )
         l, r = st.columns(2)
         with l:
@@ -226,12 +237,12 @@ def overview(data, months):
 def intelligence(data, months, thresholds):
     st.header("SKU & demand intelligence")
     st.caption(
-        "Prioritize attention using revenue concentration and observed net-demand variability."
+        "Find important products and see how much their sales quantities change each month."
     )
     a, b, x, y = thresholds
     table = classify(data, months, a, b, x, y)
     st.info(
-        f"ABC: positive net revenue only, A up to {a:g}%, B up to {b:g}%. Boundary-crossing SKU stays in its starting class. N = nonpositive revenue. XYZ uses {len(months)} selected calendar months; absent sales in included months are zero. CV uses population standard deviation. N = nonpositive mean. Full selection = 12-month analysis."
+        f"ABC groups products by sales value: A covers roughly the first {a:g}% of positive sales, B continues up to {b:g}%, and C covers the rest. A product that crosses a cutoff stays in the group where it started. XYZ shows how steady demand is: X = steady, Y = some changes, Z = large changes. We use your {len(months)} selected months and count months with no sales as zero. N means sales or average demand is zero or less, so that product cannot join the usual groups."
     )
     l, r = st.columns([2, 1])
     eligible = table.loc[table.sales > 0]
@@ -250,7 +261,7 @@ def intelligence(data, months, thresholds):
                 go.Scatter(
                     x=eligible["product"],
                     y=eligible.cumulative_pct,
-                    name="Cumulative eligible revenue %",
+                    name="Running share of positive sales (%)",
                     line_color="#173454",
                 ),
                 secondary_y=True,
@@ -294,26 +305,26 @@ def intelligence(data, months, thresholds):
         st.success(RECOMMENDATIONS[segment])
         chosen = table.loc[table.segment == segment]
         st.write(f"{len(chosen)} products · AED {chosen.sales.sum():,.2f} net sales")
-        st.dataframe(
+        display_table(
             chosen[["product", "brand", "sales", "demand_cv"]],
             hide_index=True,
             width="stretch",
         )
     with r:
-        st.subheader("Smart attention signals")
+        st.subheader("Products to review")
         alerts = table.loc[
             table.planning_priority.str.contains(
                 "Investigate|Validate|negative|nonpositive", case=False
             )
         ]
         st.write(f"{len(alerts)} products have exception signals.")
-        st.dataframe(
+        display_table(
             alerts[["product", "segment", "planning_priority"]].head(25),
             hide_index=True,
             width="stretch",
         )
         st.caption(
-            "Review thresholds: latest adjacent-month growth ≥20% or decline ≥20%; negative quantity rate >5%; AZ volatility; nonpositive revenue or mean. Full exception list is available in the export."
+            "We flag monthly rises or falls of at least 20%, returned/credited units above 5%, important products with uneven demand (AZ), and sales or average units of zero or less. Download the full list for review."
         )
     st.subheader("SKU planning workbench")
     search = st.text_input("Search product, brand or category", key="sku_search")
@@ -326,7 +337,7 @@ def intelligence(data, months, thresholds):
             .any(axis=1)
         ]
     st.caption(
-        "Select a row to open that product's demand history below. Search narrows this table; the full segmentation export keeps your dashboard scope."
+        "Select a row to see that product’s monthly demand below. Search only changes this table; the download still includes every product matching your sidebar filters."
     )
     table_key = (
         "sku_workbench_"
@@ -334,7 +345,7 @@ def intelligence(data, months, thresholds):
             visible[["product", "sales"]].to_csv(index=False).encode()
         ).hexdigest()[:12]
     )
-    event = st.dataframe(
+    event = display_table(
         visible,
         key=table_key,
         on_select="rerun",
@@ -342,8 +353,12 @@ def intelligence(data, months, thresholds):
         hide_index=True,
         width="stretch",
         column_config={
-            "demand_cv": st.column_config.NumberColumn(format="%.3f"),
-            "sales": st.column_config.NumberColumn(format="%.2f"),
+            "demand_cv": st.column_config.NumberColumn(
+                "Demand consistency score (CV)", format="%.3f"
+            ),
+            "sales": st.column_config.NumberColumn(
+                "Sales after returns (AED)", format="%.2f"
+            ),
         },
     )
     csv_download(
@@ -373,27 +388,36 @@ def intelligence(data, months, thresholds):
         )
     )
     st.caption(
-        "Average monthly net demand = selected units / 12. selected_month_mean is the mean over included months used for CV. Monthly growth is the latest adjacent selected calendar-month comparison."
+        "Average monthly net demand always divides selected units by 12. Average in selected months uses only the months you chose and is used to measure demand consistency. Monthly growth compares the latest month with the previous month, when both are selected."
     )
 
 
 def forecasting(data, months):
     st.header("Demand forecasting & scenario lab")
     st.warning(
-        "Illustrative estimates, not purchase requirements. Only 12 months of scaled assessment history are available. Annual seasonality cannot be learned or validated. No inventory, lead times or service-level inputs are available."
+        "These forecasts are examples, not quantities to order. We have only one year of adjusted assessment data, so we cannot confirm patterns that repeat each year. Current stock, supplier delivery times and customer service targets are not provided."
     )
     grain = st.radio(
-        "Forecast scope", ["Selected portfolio", "Category", "SKU"], horizontal=True
+        "What would you like to forecast?",
+        ["Selected portfolio", "Category", "SKU"],
+        horizontal=True,
+        format_func=lambda value: {
+            "Selected portfolio": "All selected products",
+            "Category": "One category",
+            "SKU": "One product",
+        }[value],
     )
     subset = data
     if grain != "Selected portfolio":
         col = "category" if grain == "Category" else "product"
         entity = st.selectbox(
-            "Forecast entity", sorted(data[col].unique()), key="forecast_entity_" + col
+            "Choose a category or product",
+            sorted(data[col].unique()),
+            key="forecast_entity_" + col,
         )
         subset = data.loc[data[col] == entity]
     method = st.selectbox(
-        "Explainable baseline",
+        "Forecast method",
         ["3-month moving average", "Simple exponential smoothing"],
     )
     st.caption(
@@ -401,14 +425,14 @@ def forecasting(data, months):
     )
     presets = st.columns(3)
     for column, label, value in zip(
-        presets, ["Decline −20%", "Baseline 0%", "Growth +20%"], [-20, 0, 20]
+        presets, ["20% lower", "No change 0%", "20% higher"], [-20, 0, 20]
     ):
         column.button(label, on_click=set_scenario, args=(value,), width="stretch")
     scenario = st.slider(
         "Demand scenario growth / decline (%)", -80, 100, 0, 5, key="scenario_pct"
     )
     st.caption(
-        "Moving average forecasts recursively extend the last three observations. Exponential smoothing uses fixed α = 0.30 with first-observation initialization. Neither model learns annual seasonality. Signed net-demand estimates are not clipped to zero."
+        "The 3-month average uses the latest three values; later estimates also use earlier forecast values. Exponential smoothing gives more weight to recent months (30% to the latest month, 70% to the earlier estimate). Neither method learns yearly patterns. Estimates keep returns included and may be negative."
     )
     m = monthly_demand(subset, sorted(months))
     try:
@@ -419,16 +443,20 @@ def forecasting(data, months):
     c1, c2, c3 = st.columns(3)
     baseline_total = out.baseline.sum()
     scenario_total = out.scenario_estimate.sum()
-    c1.metric("Jan–Mar baseline estimate • EA", f"{baseline_total:,.0f}", border=True)
+    c1.metric(
+        "Jan–Mar original forecast • units", f"{baseline_total:,.0f}", border=True
+    )
     c2.metric(
-        "Jan–Mar scenario estimate • EA",
+        "Jan–Mar forecast with your change • units",
         f"{scenario_total:,.0f}",
         delta=f"{scenario:+d}% assumption",
         delta_color="off",
         border=True,
     )
     c3.metric(
-        "Estimated change • EA", f"{scenario_total - baseline_total:+,.0f}", border=True
+        "Estimated change • units",
+        f"{scenario_total - baseline_total:+,.0f}",
+        border=True,
     )
     fig = go.Figure()
     fig.add_trace(
@@ -441,7 +469,7 @@ def forecasting(data, months):
         )
     )
     for col, label, color in [
-        ("baseline", "Baseline estimate", "#009e98"),
+        ("baseline", "Original forecast", "#009e98"),
         ("scenario_estimate", f"Scenario estimate ({scenario:+d}%)", "#e4a740"),
     ]:
         fig.add_trace(
@@ -465,11 +493,28 @@ def forecasting(data, months):
     show(fig)
     cols = st.columns(4)
     for col, (name, value) in zip(cols, list(metrics.items())[:4]):
-        col.metric(name, "N/A" if pd.isna(value) else f"{value:,.2f}", border=True)
+        labels = {
+            "MAE": "Average error in units (MAE)",
+            "WAPE %": "Overall error % (WAPE)",
+            "Bias %": "Estimate too high/low (%)",
+            "Mean bias (units)": "Average high/low difference (units)",
+        }
+        help_text = {
+            "MAE": "The average size of the gap between forecast and actual units. Smaller is better.",
+            "WAPE %": "Total absolute error divided by total absolute actual units, as a percentage. Smaller is better. N/A means actual units add up to zero after taking absolute values.",
+            "Bias %": "Positive means estimates tend to be too high; negative means too low. Error is compared with total absolute actual units.",
+            "Mean bias (units)": "Average forecast minus actual units. Positive means too high; negative means too low.",
+        }
+        col.metric(
+            labels.get(name, name),
+            "N/A" if pd.isna(value) else f"{value:,.2f}",
+            border=True,
+            help=help_text.get(name),
+        )
     st.caption(
-        f"Rolling one-step backtest: {metrics['Backtest periods']} held-out months, training on prior observations only. WAPE = sum |forecast−actual| / sum |actual| ×100; bias uses the same denominator, positive means overforecast. MAE is in EA. Scenario assumptions are not fitted or backtested."
+        f"We tested the method on {metrics['Backtest periods']} past months, predicting each month using only earlier data. MAE is the average size of the error in units. WAPE is total absolute error ÷ total absolute actual units × 100. Bias uses the same total to show whether estimates are too high (+) or too low (−). Your growth/decline assumption is not part of this test."
     )
-    st.dataframe(out, hide_index=True, width="stretch")
+    display_table(out, hide_index=True, width="stretch")
     csv_download(
         "Download forecast estimates",
         out.assign(
@@ -486,8 +531,8 @@ def forecasting(data, months):
         for name in ["3-month moving average", "Simple exponential smoothing"]:
             _, _, result = forecast(m, name, scenario)
             comparison.append({"model": name, **result})
-        st.dataframe(pd.DataFrame(comparison), hide_index=True, width="stretch")
-        st.dataframe(back, hide_index=True, width="stretch")
+        display_table(pd.DataFrame(comparison), hide_index=True, width="stretch")
+        display_table(back, hide_index=True, width="stretch")
     st.info(
         "Planner action: investigate large customer orders, promotions and returns before applying a scenario. Assess forecast uncertainty with more history; no unsupported confidence interval is shown."
     )
@@ -496,7 +541,7 @@ def forecasting(data, months):
 def assistant(data, months, thresholds, scope):
     st.header("SupplyIQ — AI Planning Assistant")
     st.caption(
-        "Conversational analysis grounded in your filtered data • local read-only tools • optional LLM routing"
+        "Ask questions about your selected data. Answers use calculated results."
     )
     key = os.getenv("OPENAI_API_KEY", "")
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -507,13 +552,13 @@ def assistant(data, months, thresholds, scope):
     except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
         pass
     enabled = st.toggle(
-        "Use configured LLM for question interpretation",
+        "Use the optional AI service to understand questions",
         value=False,
         disabled=not bool(key),
     )
     if not key:
         st.info(
-            "No API key configured. The local assistant supports all example analytical questions and uses live calculations."
+            "The built-in assistant is ready to use without an API key. Try one of the questions below."
         )
     if enabled:
         st.caption(
@@ -528,7 +573,7 @@ def assistant(data, months, thresholds, scope):
         st.session_state.messages = []
         st.session_state.chat_context = None
     st.caption(
-        "Conversation resets when filters, workbook or classification thresholds change, preventing stale-scope answers."
+        "Chat starts fresh when you change filters, the file or group settings, so old answers are not mixed with new selections."
     )
     example = st.selectbox(
         "Try a question",
@@ -573,7 +618,7 @@ def assistant(data, months, thresholds, scope):
                 st.caption(message["notice"])
                 table = message.get("table")
                 if table is not None:
-                    st.dataframe(table, hide_index=True, width="stretch")
+                    display_table(table, hide_index=True, width="stretch")
                     csv_download(
                         "Download verified result",
                         table,
@@ -602,40 +647,40 @@ def assistant(data, months, thresholds, scope):
 
 
 def quality(data, report, filtered, months):
-    st.header("Data quality & reconciliation")
+    st.header("Data checks & totals")
     st.success(
-        "Sales-to-master joins preserve row count and financial totals."
+        "Sales records match the product and customer lists. Row counts and totals are unchanged."
         if report["reconciled"]
-        else "Reconciliation needs review."
+        else "Some totals do not match and need checking."
     )
     st.caption(
-        "Quality results below describe the entire uploaded workbook. The filtered extract and metrics are explicitly separated."
+        "File checks cover the whole workbook. Your filtered results are shown separately."
     )
     l, r = st.columns(2)
     with l:
-        st.subheader("Workbook validation")
+        st.subheader("File checks")
         rows = [
             {"Check": k.replace("_", " ").title(), "Result": str(v)}
             for k, v in report.items()
             if k not in ["about"]
         ]
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        display_table(pd.DataFrame(rows), hide_index=True, width="stretch")
     with r:
-        st.subheader("Source business context")
+        st.subheader("About the source data")
         if report["sign_mismatch_rows"]:
             st.warning(
-                f"{report['sign_mismatch_rows']} rows have opposite signs between quantity and sales or cost. Values are preserved; validate these credits/cost adjustments with the source owner."
+                f"{report['sign_mismatch_rows']} rows have opposite signs between quantity and sales or cost. Values are preserved; check these credit or cost adjustments with the person who provided the data."
             )
         st.write(report["about"])
         st.info(
-            "Negative values are retained as returns/credits. Exact duplicate rows are reported, never silently deleted. Master conflicts, unknown keys, invalid numerics/dates or mixed UOM block ingestion rather than produce misleading metrics."
+            "Negative values are kept as returns or credit notes. Repeated rows are reported, not deleted. If product or customer details do not match, dates or numbers are invalid, or units of measure differ, the app stops and asks for the file to be corrected."
         )
-        st.subheader("Filtered scope")
+        st.subheader("Your selected data")
         st.write(
             f"{len(filtered):,} rows · {len(months)} selected months · {filtered['product'].nunique()} products"
         )
-        st.dataframe(pd.DataFrame([kpis(filtered, months)]), hide_index=True)
-    st.subheader("Positive sales versus negative transactions • filtered scope")
+        display_table(pd.DataFrame([kpis(filtered, months)]), hide_index=True)
+    st.subheader("Sales and returns • your selected data")
     breakdown = pd.DataFrame(
         [
             {
@@ -647,7 +692,7 @@ def quality(data, report, filtered, months):
             for c in ["quantity", "sales", "cost"]
         ]
     )
-    st.dataframe(breakdown, hide_index=True, width="stretch")
+    display_table(breakdown, hide_index=True, width="stretch")
     csv_download(
         "Download filtered transactions",
         filtered,

@@ -115,3 +115,7 @@ The version immediately before this visual refresh is preserved as **`dashboard-
 ### Hover explanations
 
 Every graph has an **About this chart** caption with a hover-help icon. Hover to see what the graph represents, the measures/units, how to interpret colours or axes, and relevant limitations. On touch screens, tap the help indicator. Data points retain their value tooltips with clearer measure labels. Matrix cells explicitly identify ABC class, XYZ class and product count; growth cells identify division, month and percentage. KPI cards retain their definition help icons.
+
+### Plain-language wording
+
+Common labels, chart explanations, planning advice and assistant answers use everyday wording. For example, net demand is explained as **units sold minus returns**, and demand variability as **how much demand changes each month**. The sidebar's **Quick word guide** explains SKU, net sales, ABC, XYZ, CV, forecast and N/A. Tables use readable headings, and forecast error cards explain whether estimates are too high or too low. Detailed formulas remain in the methodology guide. Calculations, group cutoffs and CSV column identifiers remain unchanged; the assistant also understands questions about “uneven demand” or “demand swings.”

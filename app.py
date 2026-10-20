@@ -29,7 +29,7 @@ def cached_load(payload):
 
 with st.sidebar:
     st.title("◈ SupplyIQ")
-    st.caption("CONSUMER PLANNING CONTROL TOWER")
+    st.caption("SALES & DEMAND DASHBOARD")
     page = st.radio(
         "Workspace",
         [
@@ -94,26 +94,41 @@ with st.sidebar:
     st.caption(
         "Empty dimension selection = all available values. An empty month selection = no records."
     )
+    with st.expander("Quick word guide"):
+        st.markdown(
+            "**SKU:** a product code. **Net sales:** sales after returns and credit notes. **Net demand:** units sold minus returns. **ABC:** groups products by sales value. **XYZ:** groups them by how steady demand is. **CV:** a score for changes in demand; lower means steadier. **Forecast:** an estimate of future demand. **N/A:** cannot be calculated from this selection."
+        )
     with st.expander("Classification settings"):
+        st.caption(
+            "Choose the sales cutoffs for ABC and the demand-change scores for XYZ."
+        )
         a = st.number_input(
-            "A cumulative revenue %",
+            "A group sales cutoff (%)",
             min_value=1.0,
             max_value=98.0,
             value=80.0,
             step=1.0,
         )
         b = st.number_input(
-            "B cumulative revenue %",
+            "B group sales cutoff (%)",
             min_value=2.0,
             max_value=99.0,
             value=95.0,
             step=1.0,
         )
         x = st.number_input(
-            "X maximum CV", min_value=0.0, max_value=5.0, value=0.5, step=0.1
+            "X group maximum change score (CV)",
+            min_value=0.0,
+            max_value=5.0,
+            value=0.5,
+            step=0.1,
         )
         y = st.number_input(
-            "Y maximum CV", min_value=0.1, max_value=10.0, value=1.0, step=0.1
+            "Y group maximum change score (CV)",
+            min_value=0.1,
+            max_value=10.0,
+            value=1.0,
+            step=0.1,
         )
     st.caption("2024 assessment data • AED • EA")
 if not 0 < a < b < 100 or not 0 <= x < y:
@@ -121,7 +136,7 @@ if not 0 < a < b < 100 or not 0 <= x < y:
     st.stop()
 with st.expander("New here? Start with a planning question"):
     st.write(
-        "1. Choose your scope in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
+        "1. Choose your filters in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
     )
     shortcuts = st.columns(3)
     for column, label, destination in zip(
@@ -137,7 +152,7 @@ with st.expander("New here? Start with a planning question"):
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
 st.caption(
-    f"SCOPE  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
+    f"SELECTED DATA  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
     + ("uploaded workbook" if uploaded else "assessment workbook")
 )
 st.caption(
@@ -152,7 +167,7 @@ if active:
     st.info("Active filters · " + " | ".join(active))
 if len(selected_months) < 12:
     st.caption(
-        "Partial-year scope: excluded months are not treated as zero demand. Annual average demand remains selected units ÷ 12."
+        "You selected part of the year. Months you left out are not counted as zero demand. The annual monthly average still divides selected units by 12."
     )
 if filtered.empty:
     st.info(

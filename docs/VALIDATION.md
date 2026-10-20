@@ -44,3 +44,7 @@ The version before the visual refresh is preserved remotely as `dashboard-v2-bef
 ## Hover-help update
 
 The automated suite reports **31 passed**, adding checks for chart-specific guidance, chart-help descriptions, matrix value tooltips and plain-language axis units. The live Chromium smoke test also hovers over the chart-caption help icon and checks that the selected KPI's explanation appears before exercising chart controls, tabs, SKU selection and downloads.
+
+## Plain-language update
+
+The full automated suite reports **31 passed** after simplifying the wording. Table headings and review messages are translated for display without changing the underlying classification codes, calculations or CSV column identifiers. Browser checks cover the renamed scenario buttons, simpler assistant output, chart help and Data checks & totals page, as well as the existing filter, SKU selection and download interactions.
