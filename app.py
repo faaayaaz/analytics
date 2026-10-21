@@ -18,7 +18,7 @@ from modules.theme import apply_theme
 
 apply_theme()
 st.markdown(
-    '<div class="hero"><div class="eyebrow">SUPPLYIQ / CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1><p>Demand Analytics | SKU Prioritization | Forecasting | AI-Powered Insights</p></div>',
+    '<div class="hero"><div class="eyebrow">SUPPLYIQ <span class="hero-divider">/</span> CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1><p>Demand Analytics | SKU Prioritization | Forecasting | AI-Powered Insights</p><div class="hero-tags"><span>2024 sales analysis</span><span>AED · EA</span><span>Explore · Forecast · Ask</span></div></div>',
     unsafe_allow_html=True,
 )
 
@@ -30,19 +30,20 @@ def cached_load(payload):
 
 with st.sidebar:
     st.title("◈ SupplyIQ")
-    st.caption("CONSUMER PLANNING CONTROL TOWER")
+    st.caption("SUPPLY PLANNING WORKSPACE")
     page = st.radio(
-        "Workspace",
+        "Pages",
         [
             "Executive overview",
-            "SKU & demand intelligence",
-            "Forecasting & scenario lab",
+            "SKU analysis",
+            "Demand forecasting",
             "SupplyIQ assistant",
-            "Data quality & exports",
+            "Data quality & downloads",
         ],
         key="workspace",
     )
-    uploaded = st.file_uploader("Replace assessment workbook", type=["xlsx"])
+    with st.expander("Upload a different workbook"):
+        uploaded = st.file_uploader("Replace assessment workbook", type=["xlsx"])
 try:
     payload = uploaded.getvalue() if uploaded else DEFAULT_PATH.read_bytes()
     data, report = cached_load(payload)
@@ -135,21 +136,6 @@ with st.sidebar:
 if not 0 < a < b < 100 or not 0 <= x < y:
     st.error("Set thresholds to 0 < A < B < 100 and 0 ≤ X < Y.")
     st.stop()
-with st.expander("New here? Start with a planning question"):
-    st.write(
-        "1. Choose your filters in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
-    )
-    shortcuts = st.columns(3)
-    for column, label, destination in zip(
-        shortcuts,
-        ["Explore priority SKUs", "Try a demand scenario", "Ask SupplyIQ"],
-        [
-            "SKU & demand intelligence",
-            "Forecasting & scenario lab",
-            "SupplyIQ assistant",
-        ],
-    ):
-        column.button(label, on_click=navigate, args=(destination,), width="stretch")
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
 if page != "SupplyIQ assistant":
@@ -178,12 +164,13 @@ if page != "SupplyIQ assistant":
             width="stretch",
         )
 st.caption(
-    f"SCOPE  |  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  Source: "
+    f"YOUR SELECTION  ·  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  "
     + ("uploaded workbook" if uploaded else "assessment workbook")
 )
-st.caption(
-    "Sales-based planning intelligence. Inventory, supplier lead times and purchase orders are not provided. Source values are anonymized, scaled and randomized."
-)
+with st.expander("About this data"):
+    st.write(
+        "This assessment uses anonymized sales data with adjusted values. It does not include inventory, supplier delivery times or purchase orders. Use the results to review demand, not to decide order quantities on their own."
+    )
 active = [
     f"{column.replace('_', ' ').title()}: {', '.join(st.session_state.get('filter_' + column, []))}"
     for column in DIMENSIONS
@@ -200,14 +187,14 @@ if filtered.empty:
         "No transactions match the selected filters. Choose at least one month or broaden the dimension filters."
     )
     st.button("Restore full-year view", on_click=reset_filters, type="primary")
-    if page == "Data quality & exports":
+    if page == "Data quality & downloads":
         views.quality(data, report, filtered, selected_months)
     st.stop()
 if page == "Executive overview":
     views.overview(filtered, selected_months)
-elif page == "SKU & demand intelligence":
+elif page == "SKU analysis":
     views.intelligence(filtered, selected_months, thresholds)
-elif page == "Forecasting & scenario lab":
+elif page == "Demand forecasting":
     views.forecasting(filtered, selected_months)
 elif page == "SupplyIQ assistant":
     scope = hashlib.sha256(payload).hexdigest() + str(selections) + str(selected_months)
@@ -216,5 +203,21 @@ else:
     views.quality(data, report, filtered, selected_months)
 st.divider()
 st.caption(
-    "SUPPLYIQ  /  Evidence-led demand planning  •  All scenarios are estimates; validate commercial drivers before operational decisions."
+    "SupplyIQ · Sales-based planning insights. Forecasts are estimates; check business assumptions before making decisions."
 )
+
+with st.expander("New here? Start with a planning question"):
+    st.write(
+        "1. Choose your filters in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
+    )
+    shortcuts = st.columns(3)
+    for column, label, destination in zip(
+        shortcuts,
+        ["Explore priority SKUs", "Try a demand scenario", "Ask SupplyIQ"],
+        [
+            "SKU analysis",
+            "Demand forecasting",
+            "SupplyIQ assistant",
+        ],
+    ):
+        column.button(label, on_click=navigate, args=(destination,), width="stretch")

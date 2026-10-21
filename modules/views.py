@@ -54,6 +54,11 @@ def overview(data, months):
         if m.month.iloc[i] - pd.offsets.MonthBegin(1) != m.month.iloc[i - 1]:
             history.loc[i, "MoM Demand Growth %"] = np.nan
     focused = st.session_state.get("focus_metric", "Net Sales (AED)")
+    focused_index = list(metrics).index(focused) if focused in metrics else 0
+    st.markdown(
+        f"<style>.st-key-kpi_card_{focused_index} {{border-color:#009e98 !important;background:linear-gradient(155deg,#ffffff,#edf9f6) !important;box-shadow:0 6px 18px #009e9814;}}</style>",
+        unsafe_allow_html=True,
+    )
     for offset in [0, 4]:
         cols = st.columns(4)
         for i, (col, (name, value)) in enumerate(
@@ -87,7 +92,7 @@ def overview(data, months):
         "Select Explore trend on a card to change the chart. Mini charts show the selected monthly history; hover over the ⓘ beside a KPI for its definition."
     )
     performance, business_mix, growth_tab = st.tabs(
-        ["Performance studio", "Business mix", "Growth & insights"]
+        ["Sales & demand", "Sales breakdown", "Changes & insights"]
     )
     with performance:
         heading, control = st.columns([3, 1])
@@ -217,7 +222,7 @@ def overview(data, months):
             for column, insight in zip(columns, insights[i : i + 2]):
                 with column, st.container(border=True):
                     st.markdown(
-                        '<div class="insight-label">PLANNING OBSERVATION</div>',
+                        '<div class="insight-label">WHAT THIS MEANS</div>',
                         unsafe_allow_html=True,
                     )
                     st.write(insight)
@@ -227,7 +232,7 @@ def overview(data, months):
 
 
 def intelligence(data, months, thresholds):
-    st.header("SKU & demand intelligence")
+    st.header("SKU analysis")
     st.caption(
         "Find important products and see how much their sales quantities change each month."
     )
@@ -303,7 +308,7 @@ def intelligence(data, months, thresholds):
             width="stretch",
         )
     with r:
-        st.subheader("Smart attention signals")
+        st.subheader("Planning alerts")
         alerts = table.loc[
             table.planning_priority.str.contains(
                 "Investigate|Validate|negative|nonpositive", case=False
@@ -318,7 +323,7 @@ def intelligence(data, months, thresholds):
         st.caption(
             "We flag monthly rises or falls of at least 20%, returned/credited units above 5%, important products with uneven demand (AZ), and sales or average units of zero or less. Download the full list for review."
         )
-    st.subheader("SKU planning workbench")
+    st.subheader("SKU explorer")
     search = st.text_input("Search product, brand or category", key="sku_search")
     visible = table
     if search:
@@ -381,7 +386,7 @@ def intelligence(data, months, thresholds):
 
 
 def forecasting(data, months):
-    st.header("Demand forecasting & scenario lab")
+    st.header("Demand forecasting")
     st.warning(
         "These forecasts are examples, not quantities to order. We have only one year of adjusted assessment data, so we cannot confirm patterns that repeat each year. Current stock, supplier delivery times and customer service targets are not provided."
     )
@@ -394,13 +399,13 @@ def forecasting(data, months):
     if grain != "Selected portfolio":
         col = "category" if grain == "Category" else "product"
         entity = st.selectbox(
-            "Forecast entity",
+            "Select category or SKU",
             sorted(data[col].unique()),
             key="forecast_entity_" + col,
         )
         subset = data.loc[data[col] == entity]
     method = st.selectbox(
-        "Explainable baseline",
+        "Forecast method",
         ["3-month moving average", "Simple exponential smoothing"],
     )
     st.caption(
@@ -526,19 +531,21 @@ def assistant(data, months, thresholds, scope):
         model = st.secrets.get("OPENAI_MODEL", model)
     except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
         pass
-    enabled = st.toggle(
-        "Use configured LLM for question interpretation",
-        value=False,
-        disabled=not bool(key),
-    )
-    if not key:
-        st.info(
-            "The built-in assistant is ready to use without an API key. Try one of the questions below."
+    st.success("Ready to help with your selected sales data.", icon=":material/chat:")
+    with st.expander("Optional AI settings"):
+        enabled = st.toggle(
+            "Use configured LLM for question interpretation",
+            value=False,
+            disabled=not bool(key),
         )
-    if enabled:
-        st.caption(
-            "Your question and prior intent/entity context are sent to the API. Transaction data stays local. Your question, intent context and up to 15 rows of verified aggregate results are sent to the API for interpretation. API output cannot execute queries."
-        )
+        if not key:
+            st.info(
+                "The built-in assistant is ready to use without an API key. Try one of the questions below."
+            )
+        if enabled:
+            st.caption(
+                "Your question and prior intent/entity context are sent to the API. Transaction data stays local. Your question, intent context and up to 15 rows of verified aggregate results are sent to the API for interpretation. API output cannot execute queries."
+            )
     history_key = hashlib.sha256((scope + str(thresholds)).encode()).hexdigest()
     if st.session_state.get("chat_scope") != history_key:
         st.session_state.chat_scope = history_key
@@ -635,11 +642,11 @@ def assistant(data, months, thresholds, scope):
                                 table,
                                 x,
                                 y,
-                                "Verified analytical result",
+                                "Results from your data",
                                 "division" if kind == "comparison" else None,
                             )
                             if kind in ["line", "comparison"]
-                            else bar(table, x, y, "Verified analytical result")
+                            else bar(table, x, y, "Results from your data")
                         )
                         show(fig, key=f"chat_chart_{i}")
                 st.caption("Follow up: " + " • ".join(FOLLOWUPS))
@@ -664,13 +671,14 @@ def assistant(data, months, thresholds, scope):
                 args=(prompt,),
                 width="stretch",
             )
-    st.caption(
-        "No free-form SQL or code execution. Questions are mapped to fixed analytical functions; DuckDB runs parameterized, fixed read-only aggregation. API failure falls back to the local assistant. Forecasts and classification are analytical estimates, not inventory advice."
-    )
+    with st.expander("How SupplyIQ answers questions"):
+        st.write(
+            "SupplyIQ calculates answers from the sales data matching your filters. It uses a fixed set of safe calculations. The optional AI service helps understand questions and explain results. If that service is unavailable, built-in analysis still works. Stock levels, supplier delivery times and order requirements are not available in this file."
+        )
 
 
 def quality(data, report, filtered, months):
-    st.header("Data quality & reconciliation")
+    st.header("Data quality & totals")
     st.success(
         "Sales records match the product and customer lists. Row counts and totals are unchanged."
         if report["reconciled"]

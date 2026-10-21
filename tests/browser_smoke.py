@@ -32,15 +32,15 @@ with sync_playwright() as p:
         timeout=30000
     )
     page.get_by_text("Line", exact=True).click()
-    page.get_by_role("tab", name="Business mix", exact=True).click()
+    page.get_by_role("tab", name="Sales breakdown", exact=True).click()
     page.locator(".js-plotly-plot:visible").nth(3).wait_for(timeout=30000)
-    page.get_by_role("tab", name="Growth & insights", exact=True).click()
+    page.get_by_role("tab", name="Changes & insights", exact=True).click()
     page.get_by_role("heading", name="Executive insights", exact=True).wait_for(
         timeout=30000
     )
-    page.get_by_role("tab", name="Performance studio", exact=True).click()
-    page.get_by_text("SKU & demand intelligence", exact=True).first.click()
-    page.get_by_text("SKU planning workbench", exact=True).wait_for(timeout=30000)
+    page.get_by_role("tab", name="Sales & demand", exact=True).click()
+    page.get_by_text("SKU analysis", exact=True).first.click()
+    page.get_by_text("SKU explorer", exact=True).wait_for(timeout=30000)
     page.get_by_label("Search product, brand or category").fill("P001")
     page.get_by_label("Search product, brand or category").press("Enter")
     grid = page.locator('[data-testid="stDataFrame"]').nth(2)
@@ -65,10 +65,8 @@ with sync_playwright() as p:
     table = pd.read_csv("/tmp/sku_segmentation.csv")
     assert len(table) == 250 and abs(table.sales.sum() - 441894325.26) < 0.01
     page.screenshot(path="/tmp/supplyiq-sku.png", full_page=True)
-    page.get_by_text("Forecasting & scenario lab", exact=True).first.click()
-    page.get_by_text("Demand forecasting & scenario lab", exact=True).wait_for(
-        timeout=30000
-    )
+    page.get_by_text("Demand forecasting", exact=True).first.click()
+    page.get_by_text("Demand forecasting", exact=True).wait_for(timeout=30000)
     with page.expect_download(timeout=30000) as event:
         page.get_by_role("button", name="Download forecast estimates").click()
     event.value.save_as("/tmp/forecast_estimates.csv")
@@ -84,10 +82,8 @@ with sync_playwright() as p:
     page.get_by_text(
         "Products with the biggest month-to-month swings", exact=False
     ).wait_for(timeout=30000)
-    page.get_by_text("Data quality & exports", exact=True).first.click()
-    page.get_by_text("Data quality & reconciliation", exact=True).wait_for(
-        timeout=30000
-    )
+    page.get_by_text("Data quality & downloads", exact=True).first.click()
+    page.get_by_text("Data quality & totals", exact=True).wait_for(timeout=30000)
     with page.expect_download(timeout=30000) as event:
         page.get_by_role("button", name="Download filtered transactions").click()
     event.value.save_as("/tmp/filtered_sales.csv")

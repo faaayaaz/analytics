@@ -10,18 +10,18 @@ def test_all_pages_and_filters():
     assert len(app.metric) == 8
     assert "441,894,325" in app.metric[0].value
     for page in [
-        "SKU & demand intelligence",
-        "Forecasting & scenario lab",
+        "SKU analysis",
+        "Demand forecasting",
         "SupplyIQ assistant",
-        "Data quality & exports",
+        "Data quality & downloads",
     ]:
         app.sidebar.radio[0].set_value(page).run()
         assert not app.exception, [(e.message) for e in app.exception]
-        if page == "SKU & demand intelligence":
+        if page == "SKU analysis":
             assert len(app.dataframe) >= 3
             app.text_input[0].set_value("P001").run()
             assert not app.exception
-        if page == "Forecasting & scenario lab":
+        if page == "Demand forecasting":
             app.slider[0].set_value(20).run()
             assert not app.exception
             app.selectbox[0].set_value("Simple exponential smoothing").run()
@@ -63,7 +63,7 @@ def test_usability_shortcuts_and_filter_recovery():
     assert app.multiselect(key="filter_division").value == []
     assert "441,894,325" in app.metric[0].value
     click("Try a demand scenario")
-    assert app.radio(key="workspace").value == "Forecasting & scenario lab"
+    assert app.radio(key="workspace").value == "Demand forecasting"
     click("Growth +20%")
     assert app.slider(key="scenario_pct").value == 20
     assert float(app.metric[2].value.replace(",", "")) > 0
@@ -80,9 +80,9 @@ def test_visual_metric_exploration():
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
     assert not app.exception
     assert [tab.label for tab in app.tabs] == [
-        "Performance studio",
-        "Business mix",
-        "Growth & insights",
+        "Sales & demand",
+        "Sales breakdown",
+        "Changes & insights",
     ]
     app.button(key="focus_1").click().run()
     assert not app.exception

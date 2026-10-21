@@ -70,7 +70,7 @@ def chart_guide(fig):
             "Each point shows units sold minus returns for a selected month. EA means individual units; pack sizes may differ between products. Zero means sales and returns add up to zero, not that stock is unavailable.",
         ),
         (
-            "verified analytical result",
+            "results from your data",
             "This chart shows the calculated results in the assistant table above. Read the axis labels to see what is being measured. Hover for exact values. The chart uses the same filters as the rest of the dashboard.",
         ),
     ]
@@ -102,7 +102,12 @@ def show(fig, key=None, help_text=None):
         template="plotly_white",
         colorway=COLORS,
         font=dict(family="Arial", color="#20344c"),
-        margin=dict(l=12, r=12, t=45, b=12),
+        margin=dict(
+            l=20,
+            r=65 if "yaxis2" in fig.layout else 20,
+            t=85 if len(fig.data) > 1 else 50,
+            b=20,
+        ),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         legend_title_text="",
@@ -111,6 +116,8 @@ def show(fig, key=None, help_text=None):
         else "closest",
         hoverlabel=dict(bgcolor="#132c43", font_color="white", bordercolor="#009e98"),
         transition=dict(duration=250),
+        title_font=dict(size=16, color="#173454"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
     )
     st.plotly_chart(fig, width="stretch", key=key, config={"displaylogo": False})
 

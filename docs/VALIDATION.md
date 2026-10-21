@@ -60,3 +60,7 @@ The full suite reports **32 passed**. A new Streamlit interaction test opens a s
 ## Assistant import compatibility fix
 
 Assistant callbacks now live in `modules/assistant_actions.py`. The app no longer imports `open_assistant` or `queue_question` from the existing filter-helper module. A regression test supplies a simulated older `modules.usability` module without those functions, then checks application startup and the dashboard's assistant summary action. The full suite reports **33 passed**. This verifies the code path locally; the live Streamlit Cloud instance must load the new revision before its deployed state can be confirmed.
+
+## Visual polish and navigation cleanup
+
+The full automated suite reports **33 passed** after the layout, theme and navigation changes. Regression checks use the updated page/tab names while retaining the original KPI names and source totals. Browser checks cover desktop/mobile layouts, chart hover explanations, tabs, SKU selection, assistant launch/quick questions and downloads. No KPI calculation, classification cutoff or forecast algorithm changed.

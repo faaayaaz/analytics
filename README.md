@@ -22,10 +22,10 @@ python -m pytest -q
 ## Workspaces
 
 - **Executive overview:** eight KPI cards with interactive definitions, sales/demand trends, division revenue and margin, top products, categories, channels, growth heatmap and calculated insights.
-- **SKU & demand intelligence:** configurable ABC/XYZ boundaries, Pareto, nine-cell matrix, segment exploration, explicit attention criteria, searchable SKU workbench, product histories and segmentation CSV.
-- **Forecasting & scenario lab:** selected portfolio, category or SKU; recursive three-month average and fixed-alpha exponential smoothing; rolling backtests; January–March 2025 estimates; growth/decline scenario and CSV export.
+- **SKU analysis:** configurable ABC/XYZ boundaries, Pareto, nine-cell matrix, segment exploration, explicit attention criteria, searchable SKU workbench, product histories and segmentation CSV.
+- **Demand forecasting:** selected portfolio, category or SKU; recursive three-month average and fixed-alpha exponential smoothing; rolling backtests; January–March 2025 estimates; growth/decline scenario and CSV export.
 - **SupplyIQ assistant:** real-data natural-language analysis, follow-up context, result tables, charts and downloads. Works without an API key. Optional LLM interpretation uses allowlisted tools and verified aggregate evidence.
-- **Data quality & exports:** master relationship validation, missing/duplicate checks, financial reconciliation, sign issues, source notes, and filtered transaction/report downloads.
+- **Data quality & downloads:** master relationship validation, missing/duplicate checks, financial reconciliation, sign issues, source notes, and filtered transaction/report downloads.
 
 Month, Division, Category, Brand, Product, Customer Type, Country and Sales Channel filters apply consistently to all analytical pages and assistant tools. Cascading dimensions support Division → Category → Brand → SKU exploration. No selected dimension values means “all available”; no selected months means no records. The quality panel explicitly reports full-workbook validation separately from filtered figures.
 
@@ -125,3 +125,9 @@ Technical names stay unchanged, including **MoM Demand Growth**, **Active SKUs**
 Every dashboard page now has a visible **Ask SupplyIQ** button and **Summarize my selection** action. The first opens your conversation; the second opens the assistant and answers a summary question immediately. Both keep your current filters.
 
 Inside SupplyIQ, six quick-question buttons run real calculations without typing: summary, top 10 SKUs, demand variability, AZ products, declining categories and unusual demand changes. Follow-up buttons offer planning priorities, monthly demand and an explanation of unavailable stock data. The existing question dropdown and typed chat remain available. Button questions are consumed once, so refreshing the page does not submit them again. No API key is required.
+
+### Visual polish — October 21, 2026
+
+The dashboard uses a softer navy/teal palette, clearer spacing, colour accents on KPI cards, an obvious selected-card state and cleaner chart panels. Navigation uses **SKU analysis**, **Demand forecasting** and **Data quality & downloads**. Executive charts are grouped under **Sales & demand**, **Sales breakdown** and **Changes & insights**. Standard KPI names remain unchanged.
+
+Workbook upload, optional AI settings and technical background are kept in collapsible sections. The getting-started guide is below the main content, keeping the top of each page focused on the data and the SupplyIQ buttons. Hover help, the quick word guide and all calculations remain available. The version before this refresh is saved under the GitHub tag `dashboard-before-polish-2026-10-21`.
