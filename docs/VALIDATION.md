@@ -64,3 +64,7 @@ Assistant callbacks now live in `modules/assistant_actions.py`. The app no longe
 ## Visual polish and navigation cleanup
 
 The full automated suite reports **33 passed** after the layout, theme and navigation changes. Regression checks use the updated page/tab names while retaining the original KPI names and source totals. Browser checks cover desktop/mobile layouts, chart hover explanations, tabs, SKU selection, assistant launch/quick questions and downloads. No KPI calculation, classification cutoff or forecast algorithm changed.
+
+## Dashboard layout redesign
+
+The version before restructuring is saved as `dashboard-before-layout-redesign-2026-10-21`. The complete automated suite passed **33 tests**; after the division-measure switch was added, the four Streamlit UI tests also passed. The overview layout test now checks a single canvas with eight metrics, monthly/division panels and planning attention, no overview tabs or repeated Explore trend buttons, and an optional individual-KPI detail selector. Browser checks exercise the Net Units and Gross Margin chart switches, optional breakdowns, all analytical pages, SupplyIQ and CSV downloads. Source totals and calculation functions are unchanged.

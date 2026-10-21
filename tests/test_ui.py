@@ -76,20 +76,16 @@ def test_usability_shortcuts_and_filter_recovery():
     assert "441,894,325" in app.metric[0].value
 
 
-def test_visual_metric_exploration():
+def test_dashboard_layout_and_metric_detail():
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == [
-        "Sales & demand",
-        "Sales breakdown",
-        "Changes & insights",
-    ]
-    app.button(key="focus_1").click().run()
-    assert not app.exception
-    assert app.session_state["focus_metric"] == "Net Units Sold"
-    assert any(heading.value == "Net Units Sold" for heading in app.subheader)
-    assert app.button(key="focus_1").label == "Viewing trend"
-    app.button(key="focus_0").click().run()
+    assert len(app.metric) == 8
+    assert len(app.tabs) == 0
+    assert any(h.value == "Monthly performance" for h in app.subheader)
+    assert any(h.value == "Division performance" for h in app.subheader)
+    assert any(h.value == "Planning attention" for h in app.subheader)
+    assert not any(b.label == "Explore trend" for b in app.button)
+    app.selectbox(key="dashboard_detail_metric").set_value("Net Units Sold").run()
     assert not app.exception
     assert "441,894,325" in app.metric[0].value
 

@@ -10,9 +10,8 @@ from .kpi_calculations import kpis, monthly_demand, group_summary, executive_ins
 from .abc_xyz_analysis import classify, RECOMMENDATIONS
 from .forecasting import forecast
 from .ai_assistant import answer, FOLLOWUPS
-from .usability import set_scenario
+from .usability import set_scenario, navigate
 from .assistant_actions import queue_question
-from .theme import focus_metric
 from .presentation import display_table
 from .visualizations import show, line, bar
 
@@ -39,135 +38,111 @@ def csv_download(label, data, name, key):
 
 
 def overview(data, months):
+    """One dashboard canvas; secondary analysis stays below the main view."""
     st.header("Executive overview")
-    st.caption(
-        "See sales, changes in demand and products to review. All figures follow your sidebar filters."
-    )
     metrics = kpis(data, months)
     m = monthly_demand(data, sorted(months))
-    history = pd.DataFrame(
-        [kpis(data.loc[data.month == month], [month]) for month in m.month]
-    )
-    history["month"] = m.month.to_numpy()
-    history["MoM Demand Growth %"] = m.growth_pct.to_numpy()
-    for i in range(1, len(m)):
-        if m.month.iloc[i] - pd.offsets.MonthBegin(1) != m.month.iloc[i - 1]:
-            history.loc[i, "MoM Demand Growth %"] = np.nan
-    focused = st.session_state.get("focus_metric", "Net Sales (AED)")
-    focused_index = list(metrics).index(focused) if focused in metrics else 0
-    st.markdown(
-        f"<style>.st-key-kpi_card_{focused_index} {{border-color:#009e98 !important;background:linear-gradient(155deg,#ffffff,#edf9f6) !important;box-shadow:0 6px 18px #009e9814;}}</style>",
-        unsafe_allow_html=True,
-    )
-    for offset in [0, 4]:
-        cols = st.columns(4)
-        for i, (col, (name, value)) in enumerate(
-            zip(cols, list(metrics.items())[offset : offset + 4]), start=offset
+    for offset in (0, 4):
+        columns = st.columns(4)
+        for i, (column, (name, value)) in enumerate(
+            zip(columns, list(metrics.items())[offset : offset + 4]), start=offset
         ):
-            with col, st.container(border=True, key=f"kpi_card_{i}"):
-                display = (
+            with column, st.container(border=True, key=f"kpi_card_{i}"):
+                text = (
                     "N/A"
                     if pd.isna(value)
                     else f"{value:,.2f}%"
                     if "%" in name
                     else f"{value:,.0f}"
                 )
-                spark = history[name].dropna().tolist()
-                st.metric(
-                    name,
-                    display,
-                    help=DEFINITIONS[name],
-                    chart_data=spark or None,
-                    chart_type="line",
-                )
-                st.button(
-                    "Viewing trend" if focused == name else "Explore trend",
-                    key=f"focus_{i}",
-                    on_click=focus_metric,
-                    args=(name,),
-                    width="stretch",
-                    type="primary" if focused == name else "secondary",
-                )
-    st.caption(
-        "Select Explore trend on a card to change the chart. Mini charts show the selected monthly history; hover over the ⓘ beside a KPI for its definition."
-    )
-    performance, business_mix, growth_tab = st.tabs(
-        ["Sales & demand", "Sales breakdown", "Changes & insights"]
-    )
-    with performance:
-        heading, control = st.columns([3, 1])
-        with heading:
-            st.subheader(focused)
-            st.caption("Month-by-month view of your selected data")
-        with control:
-            style = st.segmented_control(
-                "Chart style",
-                ["Line", "Area"],
-                default="Area",
-                key="overview_chart_style",
-            )
-        plot = (
-            px.area(
-                history,
-                x="month",
-                y=focused,
-                markers=True,
-                title="Selected KPI • monthly history",
-                labels={focused: focused, "month": "Month"},
-            )
-            if style == "Area"
-            else line(history, "month", focused, "Selected KPI • monthly history")
+                st.metric(name, text, help=DEFINITIONS[name])
+    trend, divisions_panel = st.columns([1.4, 1])
+    with trend, st.container(border=True, key="dashboard_trend"):
+        st.subheader("Monthly performance")
+        measure = st.segmented_control(
+            "View",
+            ["Net Sales", "Net Units"],
+            default="Net Sales",
+            key="dashboard_measure",
         )
-        plot.update_traces(line_color="#009e98")
-        show(
-            plot,
-            key="focused_metric_chart",
-            help_text=DEFINITIONS[focused]
-            + " The chart shows each selected month separately. The card above covers the whole selection. Average monthly demand points show each month’s units divided by 12. Growth needs both neighbouring months and more than zero units in the earlier month.",
+        field = "quantity" if measure == "Net Units" else "sales"
+        title = (
+            "Monthly net demand • EA"
+            if field == "quantity"
+            else "Monthly net sales • AED"
         )
-        l, r = st.columns(2)
-        with l:
-            show(line(m, "month", "sales", "Monthly net sales • AED"))
-        with r:
-            show(line(m, "month", "quantity", "Monthly net demand • EA"))
-    with business_mix:
+        fig = px.area(
+            m,
+            x="month",
+            y=field,
+            markers=True,
+            title=title,
+            labels={
+                "month": "Month",
+                "sales": "Net sales (AED)",
+                "quantity": "Net demand (EA)",
+            },
+        )
+        fig.update_traces(line_color="#009e98", fillcolor="rgba(0,158,152,.10)")
+        fig.update_layout(height=300)
+        show(fig, key="dashboard_monthly")
+    with divisions_panel, st.container(border=True, key="dashboard_divisions"):
+        st.subheader("Division performance")
         divisions = group_summary(data, "division")
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.add_trace(
-            go.Bar(
-                x=divisions.division,
-                y=divisions.sales,
-                name="Net sales (AED)",
-                marker_color="#009e98",
-            )
+        division_measure = st.segmented_control(
+            "Division measure",
+            ["Net Sales", "Gross Margin"],
+            default="Net Sales",
+            key="dashboard_division_measure",
         )
-        fig.add_trace(
-            go.Scatter(
-                x=divisions.division,
-                y=divisions.margin_pct,
-                name="Gross margin %",
-                mode="lines+markers",
-                line_color="#173454",
-            ),
-            secondary_y=True,
+        field = "margin_pct" if division_measure == "Gross Margin" else "sales"
+        fig = bar(
+            divisions,
+            field,
+            "division",
+            "Division gross margin • %"
+            if field == "margin_pct"
+            else "Division net sales • AED",
         )
-        fig.update_layout(title="Division sales and gross margin")
-        fig.update_yaxes(title_text="AED", secondary_y=False)
-        fig.update_yaxes(title_text="Margin %", secondary_y=True)
-        l, r = st.columns(2)
-        with l:
-            show(fig)
-        with r:
-            show(
-                bar(
-                    group_summary(data, "product").head(10),
-                    "product",
-                    "sales",
-                    "Top 10 products • net sales AED",
-                )
-            )
-        l, r = st.columns(2)
-        with l:
+        fig.update_traces(
+            customdata=divisions[["sales", "margin_pct"]].to_numpy(),
+            hovertemplate="Division: %{y}<br>Net sales: AED %{customdata[0]:,.2f}<br>Gross margin: %{customdata[1]:.2f}%<extra></extra>",
+        )
+        fig.update_layout(height=300, yaxis={"categoryorder": "total ascending"})
+        if field == "margin_pct":
+            fig.update_xaxes(title_text="Gross margin (%)")
+        show(
+            fig,
+            key="dashboard_divisions_chart",
+            help_text="Choose Net Sales or Gross Margin to compare divisions. Hover to see both sales in AED and gross margin. Returns and credit notes are included. These figures follow your sidebar filters.",
+        )
+
+    products, alerts = st.columns([1.4, 1])
+    with products, st.container(border=True, key="dashboard_products"):
+        st.subheader("Top 10 SKUs")
+        top = group_summary(data, "product").head(10).sort_values("sales")
+        fig = bar(top, "sales", "product", "Top 10 products • net sales AED")
+        fig.update_layout(height=340)
+        show(fig, key="dashboard_top_products")
+    with alerts, st.container(border=True, key="dashboard_alerts"):
+        st.subheader("Planning attention")
+        insights = executive_insights(data, months)
+        for i in [2, 3, 0]:
+            if i < len(insights):
+                st.write(insights[i])
+        st.caption(
+            "Demand review signals only. Stock availability is not included in this workbook."
+        )
+        st.button(
+            "Review priority SKUs",
+            key="dashboard_review_skus",
+            on_click=navigate,
+            args=("SKU analysis",),
+            width="stretch",
+        )
+    with st.expander("More breakdowns: categories, channels & monthly changes"):
+        left, right = st.columns(2)
+        with left:
             show(
                 bar(
                     group_summary(data, "category"),
@@ -176,7 +151,7 @@ def overview(data, months):
                     "Category net sales • AED",
                 )
             )
-        with r:
+        with right:
             show(
                 bar(
                     group_summary(data, "channel"),
@@ -185,7 +160,6 @@ def overview(data, months):
                     "Channel net revenue • AED",
                 )
             )
-    with growth_tab:
         heat = (
             data.groupby(["division", "month"])
             .quantity.sum()
@@ -202,32 +176,38 @@ def overview(data, months):
                 )
         change.columns = [d.strftime("%b") for d in change.columns]
         if change.notna().any().any():
-            fig = px.imshow(
-                change,
-                color_continuous_scale="RdYlGn",
-                color_continuous_midpoint=0,
-                aspect="auto",
-                text_auto=".1f",
-                title="Adjacent-month net demand growth • %",
+            show(
+                px.imshow(
+                    change,
+                    color_continuous_scale="RdYlGn",
+                    color_continuous_midpoint=0,
+                    aspect="auto",
+                    text_auto=".1f",
+                    title="Adjacent-month net demand growth • %",
+                )
             )
-            show(fig)
         else:
             st.info(
                 "Growth heatmap needs two adjacent selected months and positive prior demand."
             )
         st.subheader("Executive insights")
-        insights = executive_insights(data, months)
-        for i in range(0, len(insights), 2):
-            columns = st.columns(2)
-            for column, insight in zip(columns, insights[i : i + 2]):
-                with column, st.container(border=True):
-                    st.markdown(
-                        '<div class="insight-label">WHAT THIS MEANS</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.write(insight)
-        st.caption(
-            "Smart alerts use explicit review thresholds, not inventory positions. Explore SKU intelligence for the drivers."
+        for insight in insights:
+            st.write(insight)
+    with st.expander("Explore an individual KPI trend"):
+        focused = st.selectbox("KPI", list(metrics), key="dashboard_detail_metric")
+        history = pd.DataFrame(
+            [kpis(data.loc[data.month == month], [month]) for month in m.month]
+        )
+        history["month"] = m.month.to_numpy()
+        history["MoM Demand Growth %"] = m.growth_pct.to_numpy()
+        for i in range(1, len(m)):
+            if m.month.iloc[i] - pd.offsets.MonthBegin(1) != m.month.iloc[i - 1]:
+                history.loc[i, "MoM Demand Growth %"] = np.nan
+        show(
+            line(history, "month", focused, "Selected KPI • monthly history"),
+            key="dashboard_detail_chart",
+            help_text=DEFINITIONS[focused]
+            + " Each point shows the measure for that selected month. The KPI cards summarize the whole selection.",
         )
 
 
@@ -238,9 +218,10 @@ def intelligence(data, months, thresholds):
     )
     a, b, x, y = thresholds
     table = classify(data, months, a, b, x, y)
-    st.info(
-        f"ABC groups products by sales value: A covers roughly the first {a:g}% of positive sales, B continues up to {b:g}%, and C covers the rest. A product that crosses a cutoff stays in the group where it started. XYZ shows how steady demand is: X = steady, Y = some changes, Z = large changes. We use your {len(months)} selected months and count months with no sales as zero. N means sales or average demand is zero or less, so that product cannot join the usual groups."
-    )
+    with st.expander("How ABC–XYZ groups work"):
+        st.info(
+            f"ABC groups products by sales value: A covers roughly the first {a:g}% of positive sales, B continues up to {b:g}%, and C covers the rest. A product that crosses a cutoff stays in the group where it started. XYZ shows how steady demand is: X = steady, Y = some changes, Z = large changes. We use your {len(months)} selected months and count months with no sales as zero. N means sales or average demand is zero or less, so that product cannot join the usual groups."
+        )
     l, r = st.columns([2, 1])
     eligible = table.loc[table.sales > 0]
     with l:

@@ -18,7 +18,7 @@ with sync_playwright() as p:
     # Verify the accessible chart-explanation tooltip.
     page.get_by_role("button", name="Help", exact=True).first.hover()
     expect(page.get_by_role("tooltip")).to_contain_text(
-        "Sales after returns and credit notes", timeout=10000
+        "Each point shows sales after returns", timeout=10000
     )
     # Exercise real Plotly hover and built-in interaction controls.
     plot = page.locator(".js-plotly-plot").first
@@ -27,18 +27,17 @@ with sync_playwright() as p:
     page.get_by_role("button", name="Autoscale").first.click()
     plot.locator(".scatterlayer .point").first.hover(force=True)
     assert plot.locator(".hoverlayer").count() == 1
-    page.get_by_role("button", name="Explore trend", exact=True).nth(0).click()
-    page.get_by_role("heading", name="Net Units Sold", exact=True).wait_for(
-        timeout=30000
-    )
-    page.get_by_text("Line", exact=True).click()
-    page.get_by_role("tab", name="Sales breakdown", exact=True).click()
-    page.locator(".js-plotly-plot:visible").nth(3).wait_for(timeout=30000)
-    page.get_by_role("tab", name="Changes & insights", exact=True).click()
+    page.get_by_role("radio", name="Net Units", exact=True).click()
+    page.get_by_text("Monthly net demand • EA", exact=True).wait_for(timeout=30000)
+    page.get_by_role("radio", name="Gross Margin", exact=True).click()
+    page.get_by_text("Division gross margin • %", exact=True).wait_for(timeout=30000)
+    page.get_by_text(
+        "More breakdowns: categories, channels & monthly changes", exact=True
+    ).click()
+    page.locator(".js-plotly-plot:visible").nth(5).wait_for(timeout=30000)
     page.get_by_role("heading", name="Executive insights", exact=True).wait_for(
         timeout=30000
     )
-    page.get_by_role("tab", name="Sales & demand", exact=True).click()
     page.get_by_text("SKU analysis", exact=True).first.click()
     page.get_by_text("SKU explorer", exact=True).wait_for(timeout=30000)
     page.get_by_label("Search product, brand or category").fill("P001")

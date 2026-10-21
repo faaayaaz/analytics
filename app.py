@@ -1,4 +1,5 @@
 import hashlib
+import pandas as pd
 import streamlit as st
 from modules.data_loader import (
     load_workbook,
@@ -17,10 +18,6 @@ st.set_page_config(
 from modules.theme import apply_theme
 
 apply_theme()
-st.markdown(
-    '<div class="hero"><div class="eyebrow">SUPPLYIQ <span class="hero-divider">/</span> CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1><p>Demand Analytics | SKU Prioritization | Forecasting | AI-Powered Insights</p><div class="hero-tags"><span>2024 sales analysis</span><span>AED · EA</span><span>Explore · Forecast · Ask</span></div></div>',
-    unsafe_allow_html=True,
-)
 
 
 @st.cache_data(show_spinner="Reading and validating the workbook…", max_entries=3)
@@ -65,16 +62,18 @@ with st.sidebar:
     p2.button("Q4 only", on_click=set_period, args=(9,), width="stretch")
     month_labels = {d: d.strftime("%b %Y") for d in MONTHS}
     st.session_state.setdefault("filter_months", MONTHS.tolist())
-    selected_months = st.multiselect(
-        "Month",
-        MONTHS.tolist(),
-        key="filter_months",
-        help="Select the months to analyze. Full year is recommended for classification and forecasting.",
-        format_func=lambda d: month_labels[d],
-    )
+    with st.expander("Select individual months"):
+        selected_months = st.multiselect(
+            "Month",
+            MONTHS.tolist(),
+            key="filter_months",
+            help="Select the months to analyze. Full year is recommended for classification and forecasting.",
+            format_func=lambda d: month_labels[d],
+        )
     selections = {}
     available = data
     # Cascading dimensions implement Division → Category → Brand → SKU drilldown.
+    advanced_filters = None
     for col in DIMENSIONS:
         options = sorted(available[col].unique())
         # Remove invalid downstream selections when a parent drilldown changes.
@@ -83,13 +82,21 @@ with st.sidebar:
             st.session_state[state_key] = [
                 v for v in st.session_state[state_key] if v in options
             ]
-        values = st.multiselect(
-            col.replace("_", " ").title(),
-            options,
-            placeholder="All",
-            key=state_key,
-            help="Type to search. Leave empty to include all available values. Choices follow the filters above.",
+        if col == "product":
+            advanced_filters = st.expander("More filters: SKU, customer & market")
+        filter_container = (
+            st.container()
+            if col in ["division", "category", "brand"]
+            else advanced_filters
         )
+        with filter_container:
+            values = st.multiselect(
+                col.replace("_", " ").title(),
+                options,
+                placeholder="All",
+                key=state_key,
+                help="Type to search. Leave empty to include all available values. Choices follow the filters above.",
+            )
         selections[col] = values if values else options
         if values:
             available = available.loc[available[col].isin(values)]
@@ -138,46 +145,62 @@ if not 0 < a < b < 100 or not 0 <= x < y:
     st.stop()
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
+heading, assistant_button, summary_button = st.columns(
+    [4.5, 1.1, 1.5], vertical_alignment="center"
+)
+with heading:
+    st.markdown(
+        '<div class="dashboard-heading"><div class="eyebrow">SUPPLYIQ / CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1></div>',
+        unsafe_allow_html=True,
+    )
 if page != "SupplyIQ assistant":
-    with st.container(border=True, key="assistant_launcher"):
-        message, open_button, summary_button = st.columns(
-            [3, 1, 1.4], vertical_alignment="center"
+    assistant_button.button(
+        "Ask SupplyIQ",
+        icon=":material/chat:",
+        key="open_supplyiq",
+        on_click=open_assistant,
+        type="primary",
+        width="stretch",
+    )
+    summary_button.button(
+        "Summarize my selection",
+        icon=":material/insights:",
+        key="summary_supplyiq",
+        on_click=open_assistant,
+        args=("Summarize the main supply planning insights.",),
+        disabled=filtered.empty,
+        width="stretch",
+    )
+
+ordered_months = sorted(selected_months)
+period = "No months selected"
+if ordered_months:
+    period = (
+        (ordered_months[0].strftime("%b") + "–" + ordered_months[-1].strftime("%b %Y"))
+        if len(ordered_months) > 1
+        and all(
+            ordered_months[i] + pd.offsets.MonthBegin(1) == ordered_months[i + 1]
+            for i in range(len(ordered_months) - 1)
         )
-        with message:
-            st.markdown("**SupplyIQ — AI Planning Assistant**")
-            st.caption("Ask a question or get a summary of the data you selected.")
-        open_button.button(
-            "Ask SupplyIQ",
-            icon=":material/chat:",
-            key="open_supplyiq",
-            on_click=open_assistant,
-            type="primary",
-            width="stretch",
-        )
-        summary_button.button(
-            "Summarize my selection",
-            icon=":material/insights:",
-            key="summary_supplyiq",
-            on_click=open_assistant,
-            args=("Summarize the main supply planning insights.",),
-            disabled=filtered.empty,
-            width="stretch",
-        )
+        else ", ".join(month.strftime("%b %Y") for month in ordered_months)
+    )
+st.caption("PERIOD: " + period)
 st.caption(
     f"YOUR SELECTION  ·  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  "
     + ("uploaded workbook" if uploaded else "assessment workbook")
 )
-with st.expander("About this data"):
-    st.write(
-        "This assessment uses anonymized sales data with adjusted values. It does not include inventory, supplier delivery times or purchase orders. Use the results to review demand, not to decide order quantities on their own."
-    )
+with st.sidebar:
+    with st.expander("About this data"):
+        st.write(
+            "This assessment uses anonymized sales data with adjusted values. It does not include inventory, supplier delivery times or purchase orders. Use the results to review demand, not to decide order quantities on their own."
+        )
 active = [
     f"{column.replace('_', ' ').title()}: {', '.join(st.session_state.get('filter_' + column, []))}"
     for column in DIMENSIONS
     if st.session_state.get("filter_" + column)
 ]
 if active:
-    st.info("Active filters · " + " | ".join(active))
+    st.caption("Active filters · " + " | ".join(active))
 if len(selected_months) < 12:
     st.caption(
         "You selected part of the year. Months you left out are not counted as zero demand. The annual monthly average still divides selected units by 12."
@@ -203,7 +226,7 @@ else:
     views.quality(data, report, filtered, selected_months)
 st.divider()
 st.caption(
-    "SupplyIQ · Sales-based planning insights. Forecasts are estimates; check business assumptions before making decisions."
+    "SupplyIQ · Sales history only: stock and supplier data are not provided. Forecasts are estimates, not purchase requirements."
 )
 
 with st.expander("New here? Start with a planning question"):

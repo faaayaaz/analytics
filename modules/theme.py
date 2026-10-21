@@ -7,7 +7,18 @@ def apply_theme():
     st.markdown(
         """<style>
 .stApp {background:radial-gradient(ellipse at 88% 0%,#e5f3f0 0%,transparent 42%),#f6f8fc;}
-.block-container {padding-top:1.5rem;padding-bottom:2rem;max-width:1600px;}
+.block-container {padding-top:3rem;padding-bottom:1.5rem;max-width:1700px;}
+.dashboard-heading {padding:5px 0 12px;}
+.dashboard-heading .eyebrow {color:#087d77;font-size:10px;}
+.dashboard-heading h1 {font-size:23px;line-height:1.2;color:#173454;letter-spacing:-.035em;padding:4px 0;margin:0;}
+[data-testid="stHeadingWithActionElements"] h2 {font-size:23px;padding-top:0;}
+[data-testid="stHeadingWithActionElements"] h3 {font-size:16px;padding-top:0;}
+.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,.st-key-dashboard_alerts {background:white;border-radius:14px;border-color:#e1e8f0;}
+.st-key-dashboard_trend [data-testid="stPlotlyChart"],.st-key-dashboard_divisions [data-testid="stPlotlyChart"],.st-key-dashboard_products [data-testid="stPlotlyChart"] {border:0;box-shadow:none;padding:0;}
+.st-key-kpi_card_4,.st-key-kpi_card_5,.st-key-kpi_card_6,.st-key-kpi_card_7 {background:#edf3f7 !important;box-shadow:none;}
+.st-key-kpi_card_4 [data-testid="stMetricValue"],.st-key-kpi_card_5 [data-testid="stMetricValue"],.st-key-kpi_card_6 [data-testid="stMetricValue"],.st-key-kpi_card_7 [data-testid="stMetricValue"] {font-size:22px;}
+[class*="st-key-kpi_card_"] [data-testid="stMetric"] {padding:0;}
+[data-testid="stMetricValue"] {font-variant-numeric:tabular-nums;}
 h1,h2,h3 {letter-spacing:-.035em;}
 [data-testid="stSidebar"] {background:linear-gradient(170deg,#102138 0%,#16374b 65%,#16565b 100%);border-right:1px solid #16314d12;}
 [data-testid="stSidebar"] * {color:#e6f0f8;}
@@ -37,7 +48,7 @@ h1,h2,h3 {letter-spacing:-.035em;}
 [data-testid="stMetricLabel"] p {white-space:normal;font-size:12px;font-weight:600;color:#526b82;}
 [data-testid="stMetricValue"] {font-size:29px;font-weight:650;letter-spacing:-.04em;color:#142f49;}
 [class*="st-key-kpi_card_"] {position:relative;background:white;border-radius:16px;border-color:#e1e8f0;box-shadow:0 3px 12px #17345405;transition:transform .18s,box-shadow .18s,border-color .18s;}
-[class*="st-key-kpi_card_"]:hover {transform:translateY(-3px);box-shadow:0 9px 24px #16314d14;border-color:#3dbdb5;}
+[class*="st-key-kpi_card_"]:hover {transform:none;box-shadow:0 9px 24px #16314d14;border-color:#3dbdb5;}
 [class*="st-key-kpi_card_"]::before {content:'';display:block;height:3px;position:absolute;left:18px;right:18px;top:0;border-radius:0 0 4px 4px;background:linear-gradient(90deg,#009e98,#b6e4dc);}
 .st-key-kpi_card_1::before,.st-key-kpi_card_5::before {background:linear-gradient(90deg,#4b82b8,#c7dcf0);}
 .st-key-kpi_card_2::before,.st-key-kpi_card_6::before {background:linear-gradient(90deg,#7c72aa,#e3dff1);}
@@ -54,7 +65,13 @@ button:focus-visible {outline:3px solid #39bfb5 !important;outline-offset:2px;}
 [data-testid="stDataFrame"] {border-radius:12px;overflow:hidden;}
 [data-testid="stAlert"] {border-radius:12px;}
 .insight-label {font-size:11px;letter-spacing:1.5px;color:#087d77;font-weight:700;margin-bottom:8px;}
-@media(max-width:700px) {.hero {padding:22px;}.hero h1 {font-size:25px;}[data-testid="stMetricValue"] {font-size:25px;}[role="tab"] {padding:9px 10px;font-size:12px;}}
+@media(max-width:700px) {.dashboard-heading h1 {font-size:21px;}.hero {padding:22px;}.hero h1 {font-size:25px;}[data-testid="stMetricValue"] {font-size:25px;}[role="tab"] {padding:9px 10px;font-size:12px;}}
+@media(max-width:700px) {
+[data-testid="stHorizontalBlock"]:has(.st-key-kpi_card_0),[data-testid="stHorizontalBlock"]:has(.st-key-kpi_card_4) {flex-wrap:wrap;gap:8px;}
+[data-testid="stHorizontalBlock"]:has(.st-key-kpi_card_0)>[data-testid="stColumn"],[data-testid="stHorizontalBlock"]:has(.st-key-kpi_card_4)>[data-testid="stColumn"] {min-width:0 !important;width:calc(50% - 5px) !important;flex:1 1 calc(50% - 5px) !important;}
+[class*="st-key-kpi_card_"] [data-testid="stMetricValue"] {font-size:20px !important;}
+[class*="st-key-kpi_card_"] [data-testid="stMetricLabel"] p {font-size:10px;}
+}
 @media(prefers-reduced-motion:reduce) {* {transition:none !important;animation:none !important;}}
 </style>""",
         unsafe_allow_html=True,
