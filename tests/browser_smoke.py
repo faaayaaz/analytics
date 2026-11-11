@@ -14,9 +14,12 @@ with sync_playwright() as p:
     page.locator('[data-testid="stMetricValue"]').first.wait_for(timeout=90000)
     assert page.locator('[data-testid="stMetricValue"]:visible').count() == 4
     expect(page.locator(".st-key-global_filter_bar")).to_be_visible()
-    page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
     page.locator(".js-plotly-plot:visible").nth(2).wait_for(timeout=30000)
     assert page.locator(".js-plotly-plot:visible").count() >= 3
+    page.locator(".js-plotly-plot:visible").first.locator(
+        ".scatterlayer .point"
+    ).first.wait_for(timeout=30000)
+    page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
     # Verify the accessible chart-explanation tooltip.
     page.get_by_role("button", name="Help", exact=True).first.hover()
     expect(page.get_by_role("tooltip")).to_contain_text(

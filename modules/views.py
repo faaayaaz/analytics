@@ -15,6 +15,7 @@ from .usability import set_scenario, navigate
 from .assistant_actions import queue_question
 from .presentation import display_table
 from .visualizations import show, line, bar
+from .palette import NAVY, NAVY_BAR, GOLD, GOLD_LIGHT, SLATE, SEQUENTIAL, DIVERGING
 
 DEFINITIONS = {
     "Net Sales (AED)": "Sales after returns and credit notes have been deducted.",
@@ -88,9 +89,9 @@ def overview(data, months):
             },
         )
         fig.update_traces(
-            line=dict(color="#3563ff", width=3),
-            marker=dict(size=6, color="#ffffff", line=dict(color="#3563ff", width=2)),
-            fillcolor="rgba(53,99,255,.08)",
+            line=dict(color=NAVY, width=3),
+            marker=dict(size=6, color=GOLD_LIGHT, line=dict(color=NAVY, width=2)),
+            fillcolor="rgba(185,145,70,.10)",
         )
         fig.update_layout(height=310)
         description = (
@@ -181,7 +182,7 @@ def overview(data, months):
         fig = bar(divisions, field, "division", "")
         fig.update_traces(
             marker_color=[
-                "#079c89" if pd.notna(v) and v == divisions[field].max() else "#8bd6cb"
+                GOLD if pd.notna(v) and v == divisions[field].max() else NAVY_BAR
                 for v in divisions[field]
             ],
             customdata=[
@@ -210,7 +211,7 @@ def overview(data, months):
         fig = bar(top, "sales", "product", "")
         fig.update_traces(
             marker_color=[
-                "#3563ff" if sku == top.iloc[-1]["product"] else "#9db5ff"
+                GOLD if sku == top.iloc[-1]["product"] else NAVY_BAR
                 for sku in top["product"]
             ]
         )
@@ -272,7 +273,7 @@ def overview(data, months):
             show(
                 px.imshow(
                     change,
-                    color_continuous_scale="RdYlGn",
+                    color_continuous_scale=DIVERGING,
                     color_continuous_midpoint=0,
                     aspect="auto",
                     text_auto=".1f",
@@ -325,7 +326,7 @@ def intelligence(data, months, thresholds):
                     x=eligible["product"],
                     y=eligible.sales,
                     name="Net sales",
-                    marker_color="#009e98",
+                    marker_color=NAVY_BAR,
                 )
             )
             fig.add_trace(
@@ -333,7 +334,7 @@ def intelligence(data, months, thresholds):
                     x=eligible["product"],
                     y=eligible.cumulative_pct,
                     name="Cumulative eligible revenue %",
-                    line_color="#173454",
+                    line_color=NAVY,
                 ),
                 secondary_y=True,
             )
@@ -361,7 +362,7 @@ def intelligence(data, months, thresholds):
             matrix,
             text_auto=True,
             aspect="auto",
-            color_continuous_scale="Teal",
+            color_continuous_scale=SEQUENTIAL,
             title="ABC–XYZ planning matrix • product counts",
         )
     )
@@ -525,12 +526,12 @@ def forecasting(data, months):
             y=m.quantity,
             name="Actual 2024",
             mode="lines+markers",
-            line_color="#173454",
+            line_color=NAVY,
         )
     )
     for col, label, color in [
-        ("baseline", "Baseline estimate", "#009e98"),
-        ("scenario_estimate", f"Scenario estimate ({scenario:+d}%)", "#e4a740"),
+        ("baseline", "Baseline estimate", GOLD),
+        ("scenario_estimate", f"Scenario estimate ({scenario:+d}%)", SLATE),
     ]:
         fig.add_trace(
             go.Scatter(

@@ -78,3 +78,7 @@ Chromium and the localhost server required the approved outer execution context 
 ## Information hierarchy redesign — November 11, 2026
 
 The full automated suite passed **33 tests** after the structural rewrite; the four UI tests were then rerun with additional assertions that four supporting metrics sit in a collapsed section and only advanced dimension filters remain in the sidebar. Chromium confirmed exactly four visible headline KPI values, a visible top filter bar, chart switches, optional breakdowns, all five pages, SKU selection, SupplyIQ questions and reconciled CSV downloads. The redesign preserves all eight KPI definitions and underlying sales/forecast calculations. A new tag stores the previous premium layout before editing. Screenshots are saved separately from the earlier visual-design previews.
+
+## Navy & gold theme
+
+The complete suite passed **33 tests** after the palette, chart scale and toolbar styling changes. Chromium checks passed across the five pages, including chart help, zoom/autoscale, measure switching, SKU selection, SupplyIQ and downloads. Desktop/mobile previews were captured from the running application; the mobile overflow and four-visible-headline-KPI checks passed. Shared palette values now keep division and SKU charts consistent. The monthly-growth colour explanation was updated to match the gold-decrease/navy-increase scale. Calculations and numerical totals are unchanged.

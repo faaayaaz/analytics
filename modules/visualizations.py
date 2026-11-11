@@ -1,7 +1,8 @@
 import plotly.express as px
 import streamlit as st
+from .palette import CATEGORICAL, NAVY, GOLD
 
-COLORS = ["#3563ff", "#079c89", "#84bb33", "#f0b349", "#7c70c9", "#d87373"]
+COLORS = CATEGORICAL
 
 
 LABELS = {
@@ -43,7 +44,7 @@ def chart_guide(fig):
         ),
         (
             "adjacent-month",
-            "Rows are divisions and columns are months. Each box shows the percentage change in units sold minus returns from the previous month. Green means an increase; red means a decrease. A blank means the previous month was not selected or had zero or negative units. A colour alone does not tell you whether performance is good or bad.",
+            "Rows are divisions and columns are months. Each box shows the percentage change in units sold minus returns from the previous month. Navy means an increase; gold means a decrease. A blank means the previous month was not selected or had zero or negative units. A colour alone does not tell you whether performance is good or bad.",
         ),
         (
             "historical net demand",
@@ -114,16 +115,19 @@ def show(fig, key=None, help_text=None):
         hovermode="x unified"
         if any(t.type == "scatter" for t in fig.data)
         else "closest",
-        hoverlabel=dict(bgcolor="#132c43", font_color="white", bordercolor="#3563ff"),
+        hoverlabel=dict(bgcolor=NAVY, font_color="white", bordercolor=GOLD),
         transition=dict(duration=250),
-        title_font=dict(size=13, color="#17243c"),
+        modebar=dict(
+            bgcolor="rgba(247,246,242,.94)", color="#718096", activecolor=GOLD
+        ),
+        title_font=dict(size=13, color=NAVY),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
     )
     fig.update_xaxes(
         showgrid=False, zeroline=False, showline=False, tickfont=dict(size=10)
     )
     fig.update_yaxes(
-        gridcolor="#edf1f7", zeroline=False, showline=False, tickfont=dict(size=10)
+        gridcolor="#EDEBE5", zeroline=False, showline=False, tickfont=dict(size=10)
     )
     st.plotly_chart(fig, width="stretch", key=key, config={"displaylogo": False})
 

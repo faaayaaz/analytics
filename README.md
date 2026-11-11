@@ -157,3 +157,13 @@ The previous version, including the existing dev-container configuration, is pre
 This release reorganizes the information rather than changing the underlying analysis. Only four headline KPI cards are visible in the default overview. The remaining four are in **Additional KPIs**. The main chart and planning attention share the first analysis row; division/SKU comparisons are below. Chart titles and repeated control labels have been reduced, and Streamlit developer controls use minimal mode.
 
 [Current desktop layout](docs/screenshots/supplyiq-organized-desktop.png) · [Current mobile layout](docs/screenshots/supplyiq-organized-mobile.png)
+
+### Navy & gold theme — November 11, 2026
+
+The current theme uses deep navy (`#14253D`), muted gold (`#B99146`), champagne gold (`#D9BE82`) and warm white (`#F7F6F2`). Division and Top 10 SKU bars use the same treatment: navy bars with a gold leader. Selected controls, card trim, navigation and planning attention use coordinated gold accents; neon/electric-blue/teal accents have been removed.
+
+`modules/palette.py` supplies shared chart colours, categorical shades and matrix scales. Forecasts use navy for actuals, gold for the baseline and slate for the scenario. The monthly-growth heatmap uses gold for decreases, a light neutral midpoint and navy for increases; its hover explanation describes this mapping. The layout, formulas, filters, exports and assistant behaviour are unchanged.
+
+[Current navy & gold desktop preview](docs/screenshots/supplyiq-navy-gold-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-navy-gold-mobile.png)
+
+The previous version is preserved as `supplyiq-before-navy-gold-2026-11-11`.
