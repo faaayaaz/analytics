@@ -1,4 +1,5 @@
 import hashlib
+from html import escape
 import os
 import numpy as np
 import pandas as pd
@@ -55,6 +56,13 @@ def overview(data, months):
                     if "%" in name
                     else f"{value:,.0f}"
                 )
+                if i < 4:
+                    st.markdown(
+                        '<div class="metric-kicker">'
+                        + ["Revenue", "Volume", "Profit", "Margin"][i]
+                        + "</div>",
+                        unsafe_allow_html=True,
+                    )
                 st.metric(name, text, help=DEFINITIONS[name])
     trend, divisions_panel = st.columns([1.4, 1])
     with trend, st.container(border=True, key="dashboard_trend"):
@@ -83,7 +91,11 @@ def overview(data, months):
                 "quantity": "Net demand (EA)",
             },
         )
-        fig.update_traces(line_color="#009e98", fillcolor="rgba(0,158,152,.10)")
+        fig.update_traces(
+            line=dict(color="#3563ff", width=3),
+            marker=dict(size=6, color="#ffffff", line=dict(color="#3563ff", width=2)),
+            fillcolor="rgba(53,99,255,.08)",
+        )
         fig.update_layout(height=300)
         show(fig, key="dashboard_monthly")
     with divisions_panel, st.container(border=True, key="dashboard_divisions"):
@@ -105,6 +117,12 @@ def overview(data, months):
             else "Division net sales • AED",
         )
         fig.update_traces(
+            marker_color=[
+                "#079c89"
+                if pd.notna(value) and value == divisions[field].max()
+                else "#8bd6cb"
+                for value in divisions[field]
+            ],
             customdata=divisions[["sales", "margin_pct"]].to_numpy(),
             hovertemplate="Division: %{y}<br>Net sales: AED %{customdata[0]:,.2f}<br>Gross margin: %{customdata[1]:.2f}%<extra></extra>",
         )
@@ -122,6 +140,12 @@ def overview(data, months):
         st.subheader("Top 10 SKUs")
         top = group_summary(data, "product").head(10).sort_values("sales")
         fig = bar(top, "sales", "product", "Top 10 products • net sales AED")
+        fig.update_traces(
+            marker_color=[
+                "#3563ff" if sku == top.iloc[-1]["product"] else "#9db5ff"
+                for sku in top["product"]
+            ]
+        )
         fig.update_layout(height=340)
         show(fig, key="dashboard_top_products")
     with alerts, st.container(border=True, key="dashboard_alerts"):
@@ -129,7 +153,23 @@ def overview(data, months):
         insights = executive_insights(data, months)
         for i in [2, 3, 0]:
             if i < len(insights):
-                st.write(insights[i])
+                label = (
+                    "RETURNS WATCH"
+                    if insights[i].startswith(
+                        ("Returned or credited units", "Negative quantities")
+                    )
+                    else "SALES LEADER"
+                    if i == 0
+                    else "DEMAND MOVEMENT"
+                )
+                st.markdown(
+                    '<div class="attention-item"><span class="attention-index">'
+                    + label
+                    + "</span><p>"
+                    + escape(insights[i])
+                    + "</p></div>",
+                    unsafe_allow_html=True,
+                )
         st.caption(
             "Demand review signals only. Stock availability is not included in this workbook."
         )

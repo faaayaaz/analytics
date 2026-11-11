@@ -135,3 +135,13 @@ The dashboard uses a softer navy/teal palette, clearer spacing, colour accents o
 Workbook upload, optional AI settings and technical background are kept in collapsible sections. The getting-started guide is below the main content, keeping the top of each page focused on the data and the SupplyIQ buttons. Hover help, the quick word guide and all calculations remain available. The version before this refresh is saved under the GitHub tag `dashboard-before-polish-2026-10-21`.
 
 The earlier visual-polish notes describe saved historical versions. The **Dashboard layout** section above describes the current interface.
+
+### Premium SupplyIQ design — November 11, 2026
+
+The current visual system pairs a midnight-navy sidebar and revenue card with electric-blue sales charts, teal division highlights, lime planning accents and light readable surfaces. The overview keeps its single-canvas layout, original KPI names, filters, calculations and SupplyIQ actions. Planning attention uses a dark panel with short labelled observations. Motion respects reduced-motion preferences and mobile KPI cards remain in two columns.
+
+The leading bar highlight follows the selected division measure; it changes with Net Sales/Gross Margin. All values come from the workbook. No fictional performance deltas, stock statuses or live-data indicators are introduced.
+
+[Desktop preview](docs/screenshots/supplyiq-premium-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-premium-mobile.png)
+
+The previous version, including the existing dev-container configuration, is preserved at `supplyiq-before-premium-redesign-2026-11-11`.

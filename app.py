@@ -27,7 +27,7 @@ def cached_load(payload):
 
 with st.sidebar:
     st.title("◈ SupplyIQ")
-    st.caption("SUPPLY PLANNING WORKSPACE")
+    st.caption("DEMAND • INSIGHT • ACTION")
     page = st.radio(
         "Pages",
         [
@@ -150,7 +150,7 @@ heading, assistant_button, summary_button = st.columns(
 )
 with heading:
     st.markdown(
-        '<div class="dashboard-heading"><div class="eyebrow">SUPPLYIQ / CONSUMER PLANNING</div><h1>Consumer Supply Planning Intelligence</h1></div>',
+        '<div class="dashboard-heading"><div class="eyebrow"><span class="brand-mark">↗</span> SUPPLYIQ / PLANNING INTELLIGENCE</div><h1>Consumer Supply Planning Intelligence</h1></div>',
         unsafe_allow_html=True,
     )
 if page != "SupplyIQ assistant":

@@ -1,7 +1,7 @@
 import plotly.express as px
 import streamlit as st
 
-COLORS = ["#009e98", "#173454", "#4b82b8", "#efb44f", "#a178b6", "#db6b67"]
+COLORS = ["#3563ff", "#079c89", "#84bb33", "#f0b349", "#7c70c9", "#d87373"]
 
 
 LABELS = {
@@ -101,7 +101,7 @@ def show(fig, key=None, help_text=None):
     fig.update_layout(
         template="plotly_white",
         colorway=COLORS,
-        font=dict(family="Arial", color="#20344c"),
+        font=dict(family="Arial", color="#526581", size=11),
         margin=dict(
             l=20,
             r=65 if "yaxis2" in fig.layout else 20,
@@ -114,10 +114,16 @@ def show(fig, key=None, help_text=None):
         hovermode="x unified"
         if any(t.type == "scatter" for t in fig.data)
         else "closest",
-        hoverlabel=dict(bgcolor="#132c43", font_color="white", bordercolor="#009e98"),
+        hoverlabel=dict(bgcolor="#132c43", font_color="white", bordercolor="#3563ff"),
         transition=dict(duration=250),
-        title_font=dict(size=16, color="#173454"),
+        title_font=dict(size=13, color="#17243c"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+    )
+    fig.update_xaxes(
+        showgrid=False, zeroline=False, showline=False, tickfont=dict(size=10)
+    )
+    fig.update_yaxes(
+        gridcolor="#edf1f7", zeroline=False, showline=False, tickfont=dict(size=10)
     )
     st.plotly_chart(fig, width="stretch", key=key, config={"displaylogo": False})
 

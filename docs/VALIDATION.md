@@ -68,3 +68,9 @@ The full automated suite reports **33 passed** after the layout, theme and navig
 ## Dashboard layout redesign
 
 The version before restructuring is saved as `dashboard-before-layout-redesign-2026-10-21`. The complete automated suite passed **33 tests**; after the division-measure switch was added, the four Streamlit UI tests also passed. The overview layout test now checks a single canvas with eight metrics, monthly/division panels and planning attention, no overview tabs or repeated Explore trend buttons, and an optional individual-KPI detail selector. Browser checks exercise the Net Units and Gross Margin chart switches, optional breakdowns, all analytical pages, SupplyIQ and CSV downloads. Source totals and calculation functions are unchanged.
+
+## Premium visual redesign — November 11, 2026
+
+The full suite passed **33 tests**, and the four Streamlit UI tests were rerun successfully during visual refinement. Chromium smoke checks passed across all five pages, including chart hover help, zoom/autoscale, Net Units/Gross Margin switches, SKU selection, SupplyIQ quick questions and CSV downloads. Fresh desktop/mobile screenshots were captured under `docs/screenshots`; a fresh 390-pixel viewport passed the no-horizontal-overflow check. The design retains source totals, original KPI definitions, shared filters and the no-key assistant. Changes are limited to presentation, styling and chart highlights; numerical planning algorithms were not modified.
+
+Chromium and the localhost server required the approved outer execution context because this session's sandbox blocks socket creation. The deployed Streamlit Cloud instance has not been inspected; repository publication and a successful local browser run do not establish that Cloud has loaded the new revision.
