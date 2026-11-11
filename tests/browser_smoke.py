@@ -12,6 +12,8 @@ with sync_playwright() as p:
     page.goto("http://127.0.0.1:8501")
     page.get_by_text("Executive overview", exact=True).last.wait_for(timeout=90000)
     page.locator('[data-testid="stMetricValue"]').first.wait_for(timeout=90000)
+    assert page.locator('[data-testid="stMetricValue"]:visible').count() == 4
+    expect(page.locator(".st-key-global_filter_bar")).to_be_visible()
     page.screenshot(path="/tmp/supplyiq-overview.png", full_page=True)
     page.locator(".js-plotly-plot:visible").nth(2).wait_for(timeout=30000)
     assert page.locator(".js-plotly-plot:visible").count() >= 3
@@ -28,9 +30,9 @@ with sync_playwright() as p:
     plot.locator(".scatterlayer .point").first.hover(force=True)
     assert plot.locator(".hoverlayer").count() == 1
     page.get_by_role("radio", name="Net Units", exact=True).click()
-    page.get_by_text("Monthly net demand • EA", exact=True).wait_for(timeout=30000)
+    page.get_by_text("Net demand (EA)", exact=True).wait_for(timeout=30000)
     page.get_by_role("radio", name="Gross Margin", exact=True).click()
-    page.get_by_text("Division gross margin • %", exact=True).wait_for(timeout=30000)
+    page.get_by_text("Gross margin (%)", exact=True).wait_for(timeout=30000)
     page.get_by_text(
         "More breakdowns: categories, channels & monthly changes", exact=True
     ).click()

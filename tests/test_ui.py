@@ -35,10 +35,10 @@ def test_all_pages_and_filters():
             assert not app.exception
             assert len(app.chat_message) == 2
     app.sidebar.radio[0].set_value("Executive overview").run()
-    app.sidebar.multiselect[1].set_value(["Food"]).run()
+    app.multiselect(key="filter_division").set_value(["Food"]).run()
     assert not app.exception
     assert "193,130,713" in app.metric[0].value
-    app.sidebar.multiselect[0].set_value([]).run()
+    app.multiselect(key="filter_months").set_value([]).run()
     assert not app.exception
     assert any("No transactions" in x.value for x in app.info)
 
@@ -81,6 +81,12 @@ def test_dashboard_layout_and_metric_detail():
     assert not app.exception
     assert len(app.metric) == 8
     assert len(app.tabs) == 0
+    secondary = next(
+        item for item in app.expander if item.label.startswith("Additional KPIs:")
+    )
+    assert len(secondary.metric) == 4
+    assert not secondary.proto.expanded
+    assert len(app.sidebar.multiselect) == 4
     assert any(h.value == "Monthly performance" for h in app.subheader)
     assert any(h.value == "Division performance" for h in app.subheader)
     assert any(h.value == "Planning attention" for h in app.subheader)

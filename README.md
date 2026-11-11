@@ -21,7 +21,7 @@ python -m pytest -q
 
 ## Workspaces
 
-- **Executive overview:** eight KPI cards with interactive definitions, sales/demand trends, division revenue and margin, top products, categories, channels, growth heatmap and calculated insights.
+- **Executive overview:** four headline KPIs and four optional supporting KPIs with interactive definitions, sales/demand trends, division revenue and margin, top products, categories, channels, growth heatmap and calculated insights.
 - **SKU analysis:** configurable ABC/XYZ boundaries, Pareto, nine-cell matrix, segment exploration, explicit attention criteria, searchable SKU workbench, product histories and segmentation CSV.
 - **Demand forecasting:** selected portfolio, category or SKU; recursive three-month average and fixed-alpha exponential smoothing; rolling backtests; January–March 2025 estimates; growth/decline scenario and CSV export.
 - **SupplyIQ assistant:** real-data natural-language analysis, follow-up context, result tables, charts and downloads. Works without an API key. Optional LLM interpretation uses allowlisted tools and verified aggregate evidence.
@@ -108,11 +108,17 @@ These controls reuse the original analytical functions and preserve the underlyi
 
 ### Dashboard layout
 
-The overview is a single dashboard canvas. The compact top bar contains the app title and SupplyIQ actions. Four primary KPIs sit above four smaller supporting metrics. Monthly performance and division performance are visible side by side, with Net Sales/Net Units and Net Sales/Gross Margin switches. Top SKUs and planning attention appear underneath. Category/channel breakdowns, the growth heatmap and individual KPI histories are available in collapsed detail sections.
+The current overview follows one reading order:
 
-The sidebar keeps Division, Category and Brand visible. Individual month selection and additional SKU/customer/market filters are collapsed to reduce clutter. Hover help and the getting-started guide remain available. Standard KPI names and calculations are unchanged. Desktop charts sit together; mobile KPI cards use two columns.
+1. **Filter:** Division, Category and Brand are together in the top filter bar. Period and reset controls share a popover; SKU/customer/market filters remain in the sidebar.
+2. **Summary:** Four headline KPIs are visible by default: Net Sales, Net Units Sold, Gross Profit and Gross Margin.
+3. **Review:** One wide monthly chart sits beside a concise planning panel showing actual demand movement, leading-division sales share and negative quantity rate.
+4. **Compare:** Division performance and Top 10 SKUs appear together below.
+5. **Go deeper:** Supporting KPIs, category/channel breakdowns, monthly growth and individual KPI histories open only when needed.
 
-The version before the dashboard layout redesign is preserved as **`dashboard-before-layout-redesign-2026-10-21`**. Earlier tags remain available. Restoring a prior version can be done in a new commit without erasing history.
+All eight original KPI calculations remain available. Filters apply to every page and SupplyIQ; units, dates, numerical definitions and CSV exports are unchanged. The sidebar focuses on navigation, data source, advanced filters and help.
+
+The version before this information-hierarchy redesign is preserved as **`supplyiq-before-organization-redesign-2026-11-11`**. Earlier tags remain available. Restore a prior version through a new commit to keep history intact.
 
 ### Hover explanations
 
@@ -145,3 +151,9 @@ The leading bar highlight follows the selected division measure; it changes with
 [Desktop preview](docs/screenshots/supplyiq-premium-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-premium-mobile.png)
 
 The previous version, including the existing dev-container configuration, is preserved at `supplyiq-before-premium-redesign-2026-11-11`.
+
+### Organization redesign — November 11, 2026
+
+This release reorganizes the information rather than changing the underlying analysis. Only four headline KPI cards are visible in the default overview. The remaining four are in **Additional KPIs**. The main chart and planning attention share the first analysis row; division/SKU comparisons are below. Chart titles and repeated control labels have been reduced, and Streamlit developer controls use minimal mode.
+
+[Current desktop layout](docs/screenshots/supplyiq-organized-desktop.png) · [Current mobile layout](docs/screenshots/supplyiq-organized-mobile.png)

@@ -9,3 +9,5 @@ headless = true
 maxUploadSize = 40
 [browser]
 gatherUsageStats = false
+[client]
+toolbarMode = "minimal"

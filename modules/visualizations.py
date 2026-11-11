@@ -105,7 +105,7 @@ def show(fig, key=None, help_text=None):
         margin=dict(
             l=20,
             r=65 if "yaxis2" in fig.layout else 20,
-            t=85 if len(fig.data) > 1 else 50,
+            t=85 if len(fig.data) > 1 else (50 if fig.layout.title.text else 15),
             b=20,
         ),
         paper_bgcolor="rgba(0,0,0,0)",

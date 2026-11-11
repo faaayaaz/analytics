@@ -11,12 +11,11 @@ from modules.data_loader import (
 from modules import views
 from modules.usability import reset_filters, set_period, navigate
 from modules.assistant_actions import open_assistant
+from modules.theme import apply_theme
 
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"
 )
-from modules.theme import apply_theme
-
 apply_theme()
 
 
@@ -39,8 +38,12 @@ with st.sidebar:
         ],
         key="workspace",
     )
-    with st.expander("Upload a different workbook"):
+    st.divider()
+    with st.expander("Data source"):
         uploaded = st.file_uploader("Replace assessment workbook", type=["xlsx"])
+        st.caption(
+            "The supplied assessment workbook is used unless you upload a replacement."
+        )
 try:
     payload = uploaded.getvalue() if uploaded else DEFAULT_PATH.read_bytes()
     data, report = cached_load(payload)
@@ -48,103 +51,6 @@ except (ValueError, KeyError, OSError, TypeError) as exc:
     st.error(f"Workbook could not be loaded: {exc}")
     st.stop()
 
-with st.sidebar:
-    st.divider()
-    st.subheader("Global filters")
-    st.button(
-        "Reset all filters",
-        on_click=reset_filters,
-        width="stretch",
-        key="sidebar_reset",
-    )
-    p1, p2 = st.columns(2)
-    p1.button("Full year", on_click=set_period, args=(0,), width="stretch")
-    p2.button("Q4 only", on_click=set_period, args=(9,), width="stretch")
-    month_labels = {d: d.strftime("%b %Y") for d in MONTHS}
-    st.session_state.setdefault("filter_months", MONTHS.tolist())
-    with st.expander("Select individual months"):
-        selected_months = st.multiselect(
-            "Month",
-            MONTHS.tolist(),
-            key="filter_months",
-            help="Select the months to analyze. Full year is recommended for classification and forecasting.",
-            format_func=lambda d: month_labels[d],
-        )
-    selections = {}
-    available = data
-    # Cascading dimensions implement Division → Category → Brand → SKU drilldown.
-    advanced_filters = None
-    for col in DIMENSIONS:
-        options = sorted(available[col].unique())
-        # Remove invalid downstream selections when a parent drilldown changes.
-        state_key = "filter_" + col
-        if state_key in st.session_state:
-            st.session_state[state_key] = [
-                v for v in st.session_state[state_key] if v in options
-            ]
-        if col == "product":
-            advanced_filters = st.expander("More filters: SKU, customer & market")
-        filter_container = (
-            st.container()
-            if col in ["division", "category", "brand"]
-            else advanced_filters
-        )
-        with filter_container:
-            values = st.multiselect(
-                col.replace("_", " ").title(),
-                options,
-                placeholder="All",
-                key=state_key,
-                help="Type to search. Leave empty to include all available values. Choices follow the filters above.",
-            )
-        selections[col] = values if values else options
-        if values:
-            available = available.loc[available[col].isin(values)]
-    st.caption(
-        "Empty dimension selection = all available values. An empty month selection = no records."
-    )
-    with st.expander("Quick word guide"):
-        st.markdown(
-            "**SKU:** a product code. **Net sales:** sales after returns and credit notes. **Net demand:** units sold minus returns. **ABC:** groups products by sales value. **XYZ:** groups them by how steady demand is. **CV:** a score for changes in demand; lower means steadier. **Forecast:** an estimate of future demand. **N/A:** cannot be calculated from this selection."
-        )
-    with st.expander("Classification settings"):
-        st.caption(
-            "Choose the sales cutoffs for ABC and the demand-change scores for XYZ."
-        )
-        a = st.number_input(
-            "A cumulative revenue %",
-            min_value=1.0,
-            max_value=98.0,
-            value=80.0,
-            step=1.0,
-        )
-        b = st.number_input(
-            "B cumulative revenue %",
-            min_value=2.0,
-            max_value=99.0,
-            value=95.0,
-            step=1.0,
-        )
-        x = st.number_input(
-            "X maximum CV",
-            min_value=0.0,
-            max_value=5.0,
-            value=0.5,
-            step=0.1,
-        )
-        y = st.number_input(
-            "Y maximum CV",
-            min_value=0.1,
-            max_value=10.0,
-            value=1.0,
-            step=0.1,
-        )
-    st.caption("2024 assessment data • AED • EA")
-if not 0 < a < b < 100 or not 0 <= x < y:
-    st.error("Set thresholds to 0 < A < B < 100 and 0 ≤ X < Y.")
-    st.stop()
-filtered = filter_data(data, selections, selected_months)
-thresholds = (a, b, x, y)
 heading, assistant_button, summary_button = st.columns(
     [4.5, 1.1, 1.5], vertical_alignment="center"
 )
@@ -168,42 +74,123 @@ if page != "SupplyIQ assistant":
         key="summary_supplyiq",
         on_click=open_assistant,
         args=("Summarize the main supply planning insights.",),
-        disabled=filtered.empty,
         width="stretch",
     )
 
-ordered_months = sorted(selected_months)
-period = "No months selected"
-if ordered_months:
-    period = (
-        (ordered_months[0].strftime("%b") + "–" + ordered_months[-1].strftime("%b %Y"))
-        if len(ordered_months) > 1
-        and all(
-            ordered_months[i] + pd.offsets.MonthBegin(1) == ordered_months[i + 1]
-            for i in range(len(ordered_months) - 1)
-        )
-        else ", ".join(month.strftime("%b %Y") for month in ordered_months)
+with st.container(border=True, key="global_filter_bar"):
+    st.session_state.setdefault("filter_months", MONTHS.tolist())
+    division_slot, category_slot, brand_slot, period_slot = st.columns(
+        [1, 1, 1, 0.8], vertical_alignment="bottom"
     )
-st.caption("PERIOD: " + period)
-st.caption(
-    f"YOUR SELECTION  ·  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  {len(selected_months)} months  ·  "
-    + ("uploaded workbook" if uploaded else "assessment workbook")
-)
-with st.sidebar:
-    with st.expander("About this data"):
-        st.write(
-            "This assessment uses anonymized sales data with adjusted values. It does not include inventory, supplier delivery times or purchase orders. Use the results to review demand, not to decide order quantities on their own."
+    common_slots = {
+        "division": division_slot,
+        "category": category_slot,
+        "brand": brand_slot,
+    }
+    with (
+        period_slot,
+        st.popover("Period & reset", icon=":material/calendar_month:", width="stretch"),
+    ):
+        full, last = st.columns(2)
+        full.button("Full year", on_click=set_period, args=(0,), width="stretch")
+        last.button("Q4 only", on_click=set_period, args=(9,), width="stretch")
+        selected_months = st.multiselect(
+            "Month",
+            MONTHS.tolist(),
+            key="filter_months",
+            format_func=lambda month: month.strftime("%b %Y"),
         )
-active = [
+        st.button(
+            "Reset all filters",
+            key="sidebar_reset",
+            on_click=reset_filters,
+            width="stretch",
+        )
+        st.caption(
+            "An empty month selection means no records. Empty product or customer filters mean all available values."
+        )
+    advanced = st.sidebar.expander("More filters", expanded=False)
+    selections = {}
+    available = data
+    for column in DIMENSIONS:
+        options = sorted(available[column].unique())
+        state_key = "filter_" + column
+        if state_key in st.session_state:
+            st.session_state[state_key] = [
+                value for value in st.session_state[state_key] if value in options
+            ]
+        with common_slots.get(column, advanced):
+            values = st.multiselect(
+                column.replace("_", " ").title(),
+                options,
+                placeholder="All",
+                key=state_key,
+                help="Type to search. Leave empty for all. Filters apply across the dashboard and SupplyIQ.",
+            )
+        selections[column] = values if values else options
+        if values:
+            available = available.loc[available[column].isin(values)]
+
+with st.sidebar:
+    with st.expander("ABC–XYZ settings"):
+        a = st.number_input(
+            "A cumulative revenue %",
+            min_value=1.0,
+            max_value=98.0,
+            value=80.0,
+            step=1.0,
+        )
+        b = st.number_input(
+            "B cumulative revenue %",
+            min_value=2.0,
+            max_value=99.0,
+            value=95.0,
+            step=1.0,
+        )
+        x = st.number_input(
+            "X maximum CV", min_value=0.0, max_value=5.0, value=0.5, step=0.1
+        )
+        y = st.number_input(
+            "Y maximum CV", min_value=0.1, max_value=10.0, value=1.0, step=0.1
+        )
+    with st.expander("Help & data limits"):
+        st.write(
+            "SKU means product code. Net demand means units sold minus returns. ABC groups products by sales value; XYZ groups them by demand consistency. CV measures changes compared with average demand. N/A means a result cannot be calculated."
+        )
+        st.write(
+            "This is adjusted, anonymized 2024 assessment data. Stock levels, supplier delivery times and purchase orders are not provided. Forecasts are estimates, not order requirements."
+        )
+    st.caption("2024 assessment data · AED · EA")
+if not 0 < a < b < 100 or not 0 <= x < y:
+    st.error("Set thresholds to 0 < A < B < 100 and 0 ≤ X < Y.")
+    st.stop()
+filtered = filter_data(data, selections, selected_months)
+thresholds = (a, b, x, y)
+ordered = sorted(selected_months)
+period = "No months selected"
+if ordered:
+    period = (
+        (ordered[0].strftime("%b") + "–" + ordered[-1].strftime("%b %Y"))
+        if len(ordered) > 1
+        and all(
+            ordered[i] + pd.offsets.MonthBegin(1) == ordered[i + 1]
+            for i in range(len(ordered) - 1)
+        )
+        else ", ".join(month.strftime("%b %Y") for month in ordered)
+    )
+st.caption(
+    f"{period}  ·  {len(filtered):,} transactions  ·  {filtered['product'].nunique()} SKUs  ·  All panels use these filters"
+)
+extra = [
     f"{column.replace('_', ' ').title()}: {', '.join(st.session_state.get('filter_' + column, []))}"
-    for column in DIMENSIONS
+    for column in DIMENSIONS[3:]
     if st.session_state.get("filter_" + column)
 ]
-if active:
-    st.caption("Active filters · " + " | ".join(active))
+if extra:
+    st.caption("Additional filters · " + " | ".join(extra))
 if len(selected_months) < 12:
     st.caption(
-        "You selected part of the year. Months you left out are not counted as zero demand. The annual monthly average still divides selected units by 12."
+        "Partial-year selection. Annual monthly average still divides selected units by 12."
     )
 if filtered.empty:
     st.info(

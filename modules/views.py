@@ -39,52 +39,48 @@ def csv_download(label, data, name, key):
 
 
 def overview(data, months):
-    """One dashboard canvas; secondary analysis stays below the main view."""
+    """Four headline metrics, one main trend, an action rail, then comparisons."""
     st.header("Executive overview")
     metrics = kpis(data, months)
     m = monthly_demand(data, sorted(months))
-    for offset in (0, 4):
-        columns = st.columns(4)
-        for i, (column, (name, value)) in enumerate(
-            zip(columns, list(metrics.items())[offset : offset + 4]), start=offset
-        ):
-            with column, st.container(border=True, key=f"kpi_card_{i}"):
-                text = (
-                    "N/A"
-                    if pd.isna(value)
-                    else f"{value:,.2f}%"
-                    if "%" in name
-                    else f"{value:,.0f}"
-                )
-                if i < 4:
-                    st.markdown(
-                        '<div class="metric-kicker">'
-                        + ["Revenue", "Volume", "Profit", "Margin"][i]
-                        + "</div>",
-                        unsafe_allow_html=True,
-                    )
-                st.metric(name, text, help=DEFINITIONS[name])
-    trend, divisions_panel = st.columns([1.4, 1])
+    for i, (column, (name, value)) in enumerate(
+        zip(st.columns(4), list(metrics.items())[:4])
+    ):
+        with column, st.container(border=True, key=f"kpi_card_{i}"):
+            st.markdown(
+                '<div class="metric-kicker">'
+                + ["Revenue", "Volume", "Profit", "Margin"][i]
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+            text = (
+                "N/A"
+                if pd.isna(value)
+                else f"{value:,.2f}%"
+                if "%" in name
+                else f"{value:,.0f}"
+            )
+            st.metric(name, text, help=DEFINITIONS[name])
+    trend, attention = st.columns([2.05, 1])
+    divisions = group_summary(data, "division")
+    insights = executive_insights(data, months)
     with trend, st.container(border=True, key="dashboard_trend"):
-        st.subheader("Monthly performance")
-        measure = st.segmented_control(
-            "View",
-            ["Net Sales", "Net Units"],
-            default="Net Sales",
-            key="dashboard_measure",
-        )
+        title_slot, view_slot = st.columns([3, 2], vertical_alignment="center")
+        title_slot.subheader("Monthly performance")
+        with view_slot:
+            measure = st.segmented_control(
+                "View",
+                ["Net Sales", "Net Units"],
+                default="Net Sales",
+                key="dashboard_measure",
+                label_visibility="collapsed",
+            )
         field = "quantity" if measure == "Net Units" else "sales"
-        title = (
-            "Monthly net demand • EA"
-            if field == "quantity"
-            else "Monthly net sales • AED"
-        )
         fig = px.area(
             m,
             x="month",
             y=field,
             markers=True,
-            title=title,
             labels={
                 "month": "Month",
                 "sales": "Net sales (AED)",
@@ -96,83 +92,73 @@ def overview(data, months):
             marker=dict(size=6, color="#ffffff", line=dict(color="#3563ff", width=2)),
             fillcolor="rgba(53,99,255,.08)",
         )
-        fig.update_layout(height=300)
-        show(fig, key="dashboard_monthly")
-    with divisions_panel, st.container(border=True, key="dashboard_divisions"):
-        st.subheader("Division performance")
-        divisions = group_summary(data, "division")
-        division_measure = st.segmented_control(
-            "Division measure",
-            ["Net Sales", "Gross Margin"],
-            default="Net Sales",
-            key="dashboard_division_measure",
+        fig.update_layout(height=310)
+        description = (
+            "Each point shows sales after returns in AED for a selected month."
+            if field == "sales"
+            else "Each point shows units sold minus returns for a selected month. EA means individual units; pack sizes can differ."
         )
-        field = "margin_pct" if division_measure == "Gross Margin" else "sales"
-        fig = bar(
-            divisions,
-            field,
-            "division",
-            "Division gross margin • %"
-            if field == "margin_pct"
-            else "Division net sales • AED",
-        )
-        fig.update_traces(
-            marker_color=[
-                "#079c89"
-                if pd.notna(value) and value == divisions[field].max()
-                else "#8bd6cb"
-                for value in divisions[field]
-            ],
-            customdata=divisions[["sales", "margin_pct"]].to_numpy(),
-            hovertemplate="Division: %{y}<br>Net sales: AED %{customdata[0]:,.2f}<br>Gross margin: %{customdata[1]:.2f}%<extra></extra>",
-        )
-        fig.update_layout(height=300, yaxis={"categoryorder": "total ascending"})
-        if field == "margin_pct":
-            fig.update_xaxes(title_text="Gross margin (%)")
         show(
             fig,
-            key="dashboard_divisions_chart",
-            help_text="Choose Net Sales or Gross Margin to compare divisions. Hover to see both sales in AED and gross margin. Returns and credit notes are included. These figures follow your sidebar filters.",
+            key="dashboard_monthly",
+            help_text=description
+            + " Hover for exact values. All results follow the top filter bar.",
         )
-
-    products, alerts = st.columns([1.4, 1])
-    with products, st.container(border=True, key="dashboard_products"):
-        st.subheader("Top 10 SKUs")
-        top = group_summary(data, "product").head(10).sort_values("sales")
-        fig = bar(top, "sales", "product", "Top 10 products • net sales AED")
-        fig.update_traces(
-            marker_color=[
-                "#3563ff" if sku == top.iloc[-1]["product"] else "#9db5ff"
-                for sku in top["product"]
-            ]
-        )
-        fig.update_layout(height=340)
-        show(fig, key="dashboard_top_products")
-    with alerts, st.container(border=True, key="dashboard_alerts"):
+    with attention, st.container(border=True, key="dashboard_alerts"):
         st.subheader("Planning attention")
-        insights = executive_insights(data, months)
-        for i in [2, 3, 0]:
-            if i < len(insights):
-                label = (
-                    "RETURNS WATCH"
-                    if insights[i].startswith(
-                        ("Returned or credited units", "Negative quantities")
-                    )
-                    else "SALES LEADER"
-                    if i == 0
-                    else "DEMAND MOVEMENT"
+        growth_value = metrics["MoM Demand Growth %"]
+        rate = metrics["Negative Transaction Quantity Rate %"]
+        latest = sorted(months)
+        cards = []
+        if pd.notna(growth_value):
+            cards.append(
+                (
+                    "LATEST DEMAND CHANGE",
+                    f"{growth_value:+.2f}%",
+                    f"{latest[-1]:%b} versus {latest[-2]:%b}. Check the customer and product changes behind this movement.",
                 )
-                st.markdown(
-                    '<div class="attention-item"><span class="attention-index">'
-                    + label
-                    + "</span><p>"
-                    + escape(insights[i])
-                    + "</p></div>",
-                    unsafe_allow_html=True,
+            )
+        else:
+            cards.append(
+                (
+                    "LATEST DEMAND CHANGE",
+                    "N/A",
+                    "Select neighbouring months with positive demand in the earlier month to compare them.",
                 )
-        st.caption(
-            "Demand review signals only. Stock availability is not included in this workbook."
+            )
+        if len(divisions):
+            leader = divisions.iloc[0]
+            share = (
+                leader.sales / data.sales.sum() * 100
+                if data.sales.sum() > 0
+                else float("nan")
+            )
+            value = f"{share:.1f}%" if pd.notna(share) else "N/A"
+            cards.append(
+                (
+                    "LEADING DIVISION",
+                    value,
+                    f"{leader.division} share of selected net sales.",
+                )
+            )
+        cards.append(
+            (
+                "NEGATIVE QUANTITY RATE",
+                f"{rate:.2f}%" if pd.notna(rate) else "N/A",
+                "Returned or credited units compared with positive units sold.",
+            )
         )
+        for label, value, detail in cards:
+            st.markdown(
+                '<div class="attention-item"><span class="attention-index">'
+                + label
+                + '</span><strong class="attention-value">'
+                + escape(value)
+                + "</strong><p>"
+                + escape(detail)
+                + "</p></div>",
+                unsafe_allow_html=True,
+            )
         st.button(
             "Review priority SKUs",
             key="dashboard_review_skus",
@@ -180,6 +166,73 @@ def overview(data, months):
             args=("SKU analysis",),
             width="stretch",
         )
+        st.caption("Sales signals only · no stock data.")
+    divisions_panel, products = st.columns(2)
+    with divisions_panel, st.container(border=True, key="dashboard_divisions"):
+        st.subheader("Division performance")
+        measure = st.segmented_control(
+            "Division measure",
+            ["Net Sales", "Gross Margin"],
+            default="Net Sales",
+            key="dashboard_division_measure",
+            label_visibility="collapsed",
+        )
+        field = "margin_pct" if measure == "Gross Margin" else "sales"
+        fig = bar(divisions, field, "division", "")
+        fig.update_traces(
+            marker_color=[
+                "#079c89" if pd.notna(v) and v == divisions[field].max() else "#8bd6cb"
+                for v in divisions[field]
+            ],
+            customdata=[
+                [
+                    row.sales,
+                    f"{row.margin_pct:.2f}%" if pd.notna(row.margin_pct) else "N/A",
+                ]
+                for _, row in divisions.iterrows()
+            ],
+            hovertemplate="Division: %{y}<br>Net sales: AED %{customdata[0]:,.2f}<br>Gross margin: %{customdata[1]}<extra></extra>",
+        )
+        fig.update_layout(height=300, yaxis={"categoryorder": "total ascending"})
+        fig.update_xaxes(
+            title_text="Gross margin (%)"
+            if field == "margin_pct"
+            else "Net sales (AED)"
+        )
+        show(
+            fig,
+            key="dashboard_divisions_chart",
+            help_text="Compare divisions by Net Sales or Gross Margin. Hover to see both measures. All figures follow the selected filters; N/A means margin cannot be calculated.",
+        )
+    with products, st.container(border=True, key="dashboard_products"):
+        st.subheader("Top 10 SKUs")
+        top = group_summary(data, "product").head(10).sort_values("sales")
+        fig = bar(top, "sales", "product", "")
+        fig.update_traces(
+            marker_color=[
+                "#3563ff" if sku == top.iloc[-1]["product"] else "#9db5ff"
+                for sku in top["product"]
+            ]
+        )
+        fig.update_layout(height=334)
+        show(
+            fig,
+            key="dashboard_top_products",
+            help_text="Products ranked by net sales in AED, after returns and credit notes. Longer bars mean more sales value. These are not stock levels.",
+        )
+    with st.expander("Additional KPIs: demand growth, active SKUs & returns"):
+        for i, (column, (name, value)) in enumerate(
+            zip(st.columns(4), list(metrics.items())[4:]), start=4
+        ):
+            with column, st.container(border=True, key=f"kpi_card_{i}"):
+                text = (
+                    "N/A"
+                    if pd.isna(value)
+                    else f"{value:,.2f}%"
+                    if "%" in name
+                    else f"{value:,.0f}"
+                )
+                st.metric(name, text, help=DEFINITIONS[name])
     with st.expander("More breakdowns: categories, channels & monthly changes"):
         left, right = st.columns(2)
         with left:
@@ -355,7 +408,7 @@ def intelligence(data, months, thresholds):
             .any(axis=1)
         ]
     st.caption(
-        "Select a row to see that product’s monthly demand below. Search only changes this table; the download still includes every product matching your sidebar filters."
+        "Select a row to see that product’s monthly demand below. Search only changes this table; the download still includes every product matching your selected filters."
     )
     table_key = (
         "sku_workbench_"
