@@ -77,15 +77,23 @@ with sync_playwright() as p:
     forecast = pd.read_csv("/tmp/forecast_estimates.csv")
     assert len(forecast) == 3 and "2025" in forecast.month.iloc[0]
     page.locator(".st-key-open_supplyiq button").click()
-    page.get_by_role("button", name="Analyze selected question").wait_for(timeout=30000)
-    page.get_by_role("button", name="Analyze selected question").click()
-    page.get_by_text("Top 10 products by sales after returns", exact=False).wait_for(
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("button", name="Top 10 SKUs", exact=True).click()
+    dialog.get_by_text("Top 10 products by sales after returns", exact=False).wait_for(
         timeout=30000
     )
+    dialog.get_by_role("button", name="More questions", exact=True).click()
     page.get_by_role("button", name="Demand variability", exact=True).click()
-    page.get_by_text(
+    dialog.get_by_text(
         "Products with the biggest month-to-month swings", exact=False
     ).wait_for(timeout=30000)
+    dialog.get_by_role("button", name="Close", exact=True).click()
+    expect(dialog).not_to_be_visible()
+    # The assistant opens over the forecast rather than navigating away.
+    expect(
+        page.get_by_role("heading", name="Demand forecasting", exact=True)
+    ).to_be_visible()
     page.get_by_text("Data quality & downloads", exact=True).first.click()
     page.get_by_text("Data quality & totals", exact=True).wait_for(timeout=30000)
     with page.expect_download(timeout=30000) as event:

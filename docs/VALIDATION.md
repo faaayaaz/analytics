@@ -82,3 +82,9 @@ The full automated suite passed **33 tests** after the structural rewrite; the f
 ## Navy & gold theme
 
 The complete suite passed **33 tests** after the palette, chart scale and toolbar styling changes. Chromium checks passed across the five pages, including chart help, zoom/autoscale, measure switching, SKU selection, SupplyIQ and downloads. Desktop/mobile previews were captured from the running application; the mobile overflow and four-visible-headline-KPI checks passed. Shared palette values now keep division and SKU charts consistent. The monthly-growth colour explanation was updated to match the gold-decrease/navy-increase scale. Calculations and numerical totals are unchanged.
+
+## SupplyIQ conversation interface
+
+The complete automated suite reports **34 passed**. Updated UI tests verify that opening a summary leaves the active dashboard page unchanged, retains the Food-filtered AED 193,130,712.74 result, preserves conversation across reopen, consumes questions once, accepts typed questions, clears on New chat and resets after filter changes. The legacy-helper import regression also passes with the dialog launcher.
+
+The five-page Chromium smoke test passed with dialog questions and Close returning to the same forecast page. A separate `tests/assistant_browser_smoke.py` passed the floating launcher, starter questions, a reconciled 10-row CSV result led by P195, typed missing-inventory question, New chat, closing to the original overview, mobile input visibility and no horizontal overflow. Desktop/mobile screenshots were inspected and saved under `docs/screenshots`. No live API credentials were used; paid-provider limitations remain as previously documented. Analytical calculations were not changed.

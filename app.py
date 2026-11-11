@@ -12,11 +12,25 @@ from modules import views
 from modules.usability import reset_filters, set_period, navigate
 from modules.assistant_actions import open_assistant
 from modules.theme import apply_theme
+from modules.assistant_ui import render_assistant
 
 st.set_page_config(
     page_title="Consumer Supply Planning Intelligence", page_icon="◈", layout="wide"
 )
 apply_theme()
+
+
+def dismiss_supplyiq_dialog():
+    st.session_state["assistant_dialog_open"] = False
+
+
+@st.dialog(
+    "SupplyIQ — AI Planning Assistant",
+    width="large",
+    on_dismiss=dismiss_supplyiq_dialog,
+)
+def supplyiq_chat_dialog():
+    render_assistant(filtered, selected_months, thresholds, scope, compact=True)
 
 
 @st.cache_data(show_spinner="Reading and validating the workbook…", max_entries=3)
@@ -55,8 +69,15 @@ heading, assistant_button, summary_button = st.columns(
     [4.5, 1.1, 1.5], vertical_alignment="center"
 )
 with heading:
+    title = (
+        "SupplyIQ — AI Planning Assistant"
+        if page == "SupplyIQ assistant"
+        else "Consumer Supply Planning Intelligence"
+    )
     st.markdown(
-        '<div class="dashboard-heading"><div class="eyebrow"><span class="brand-mark">↗</span> SUPPLYIQ / PLANNING INTELLIGENCE</div><h1>Consumer Supply Planning Intelligence</h1></div>',
+        '<div class="dashboard-heading"><div class="eyebrow"><span class="brand-mark">↗</span> SUPPLYIQ / PLANNING INTELLIGENCE</div><h1>'
+        + title
+        + "</h1></div>",
         unsafe_allow_html=True,
     )
 if page != "SupplyIQ assistant":
@@ -77,7 +98,12 @@ if page != "SupplyIQ assistant":
         width="stretch",
     )
 
-with st.container(border=True, key="global_filter_bar"):
+filter_panel = (
+    st.expander("Change dashboard filters", expanded=False)
+    if page == "SupplyIQ assistant"
+    else st.container(border=True, key="global_filter_bar")
+)
+with filter_panel:
     st.session_state.setdefault("filter_months", MONTHS.tolist())
     division_slot, category_slot, brand_slot, period_slot = st.columns(
         [1, 1, 1, 0.8], vertical_alignment="bottom"
@@ -166,6 +192,10 @@ if not 0 < a < b < 100 or not 0 <= x < y:
     st.stop()
 filtered = filter_data(data, selections, selected_months)
 thresholds = (a, b, x, y)
+scope = hashlib.sha256(payload).hexdigest() + str(selections) + str(selected_months)
+if page == "SupplyIQ assistant":
+    st.session_state["assistant_dialog_open"] = False
+dialog_requested = st.session_state.get("assistant_dialog_open", False)
 ordered = sorted(selected_months)
 period = "No months selected"
 if ordered:
@@ -193,6 +223,8 @@ if len(selected_months) < 12:
         "Partial-year selection. Annual monthly average still divides selected units by 12."
     )
 if filtered.empty:
+    st.session_state["assistant_dialog_open"] = False
+    st.session_state.pop("assistant_pending_question", None)
     st.info(
         "No transactions match the selected filters. Choose at least one month or broaden the dimension filters."
     )
@@ -207,7 +239,6 @@ elif page == "SKU analysis":
 elif page == "Demand forecasting":
     views.forecasting(filtered, selected_months)
 elif page == "SupplyIQ assistant":
-    scope = hashlib.sha256(payload).hexdigest() + str(selections) + str(selected_months)
     views.assistant(filtered, selected_months, thresholds, scope)
 else:
     views.quality(data, report, filtered, selected_months)
@@ -216,18 +247,37 @@ st.caption(
     "SupplyIQ · Sales history only: stock and supplier data are not provided. Forecasts are estimates, not purchase requirements."
 )
 
-with st.expander("New here? Start with a planning question"):
-    st.write(
-        "1. Choose your filters in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
+if page != "SupplyIQ assistant":
+    st.button(
+        "Ask SupplyIQ",
+        key="assistant_fab",
+        icon=":material/chat:",
+        on_click=open_assistant,
+        type="primary",
     )
-    shortcuts = st.columns(3)
-    for column, label, destination in zip(
-        shortcuts,
-        ["Explore priority SKUs", "Try a demand scenario", "Ask SupplyIQ"],
-        [
-            "SKU analysis",
-            "Demand forecasting",
-            "SupplyIQ assistant",
-        ],
-    ):
-        column.button(label, on_click=navigate, args=(destination,), width="stretch")
+if dialog_requested and page != "SupplyIQ assistant":
+    supplyiq_chat_dialog()
+
+if page != "SupplyIQ assistant":
+    with st.expander("New here? Start with a planning question"):
+        st.write(
+            "1. Choose your filters in the sidebar. 2. Explore a question below. 3. Download the supporting results. Hover over charts for exact values; use chart controls to zoom or reset."
+        )
+        shortcuts = st.columns(3)
+        for column, label, destination in zip(
+            shortcuts,
+            ["Explore priority SKUs", "Try a demand scenario", "Ask SupplyIQ"],
+            [
+                "SKU analysis",
+                "Demand forecasting",
+                "SupplyIQ assistant",
+            ],
+        ):
+            column.button(
+                label,
+                on_click=open_assistant
+                if destination == "SupplyIQ assistant"
+                else navigate,
+                args=() if destination == "SupplyIQ assistant" else (destination,),
+                width="stretch",
+            )

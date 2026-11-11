@@ -40,7 +40,7 @@ OPENAI_API_KEY = "your-key-entered-securely"
 OPENAI_MODEL = "gpt-4o-mini"
 ```
 
-Then enable the explicit LLM toggle on the assistant page. `.env.example` documents shell variables; `.env` files are **not automatically loaded**. Never commit real credentials. Network access to `api.openai.com` is required for this optional mode.
+Then open **Settings** in SupplyIQ and enable **Use optional AI service**. `.env.example` documents shell variables; `.env` files are **not automatically loaded**. Never commit real credentials. Network access to `api.openai.com` is required for this optional mode.
 
 The model first chooses an enumerated intent. Local code executes fixed, parameterized DuckDB SELECT templates or controlled Pandas functions; model-generated SQL/code is never executed. A second optional call explains the verified aggregates. It receives the question, context and up to 15 aggregate result rows, not the transaction table. Calculated tables and deterministic narrative remain authoritative; AI interpretation is separately labeled and may need review. API errors fall back to local calculations without exposing credentials or provider error bodies. History is session-local, bounded and cleared on changes to workbook, filter scope or thresholds. No database, writes, external browsing, shell tools or arbitrary model functions are exposed to the assistant.
 
@@ -75,6 +75,8 @@ modules/kpi_calculations.py     # Shared metrics, summaries, dynamic insights
 modules/abc_xyz_analysis.py     # Classification and review signals
 modules/forecasting.py          # Baselines, scenarios, rolling backtests
 modules/ai_assistant.py         # Local intents, fixed DuckDB tools, optional LLM
+modules/assistant_ui.py         # Shared dialog/page conversation interface
+modules/assistant_actions.py    # Open chat and queue analytical questions
 modules/visualizations.py       # Consistent interactive chart rendering
 modules/views.py                # Five page renderers and downloads
 tests/                        # See tests/ for analytical and Streamlit tests
@@ -128,11 +130,17 @@ Every graph has an **About this chart** caption with a hover-help icon. Hover to
 
 Technical names stay unchanged, including **MoM Demand Growth**, **Active SKUs**, **Net demand**, **Demand CV**, **ABC–XYZ**, **MAE** and **WAPE**. Their explanations, hover help, planning advice and assistant answers use everyday wording. For example, the explanation of net demand says **units sold minus returns**. The sidebar's **Quick word guide** explains common terms. Tables keep their original column identifiers and provide simple column-header help. Detailed formulas remain in the methodology guide. Calculations, group cutoffs and CSV column identifiers remain unchanged; the assistant also understands questions about “uneven demand” or “demand swings.”
 
-### SupplyIQ buttons
+### SupplyIQ chat
 
-Every dashboard page now has a visible **Ask SupplyIQ** button and **Summarize my selection** action. The first opens your conversation; the second opens the assistant and answers a summary question immediately. Both keep your current filters.
+**Ask SupplyIQ** opens a chat window over the dashboard without changing the active page. A floating button keeps it within reach when scrolling. **Summarize my selection** opens the same window and immediately calculates a summary. Closing the window returns to the current dashboard, preserving its filters and forecast controls.
 
-Inside SupplyIQ, six quick-question buttons run real calculations without typing: summary, top 10 SKUs, demand variability, AZ products, declining categories and unusual demand changes. Follow-up buttons offer planning priorities, monthly demand and an explanation of unavailable stock data. The existing question dropdown and typed chat remain available. Button questions are consumed once, so refreshing the page does not submit them again. No API key is required.
+The welcome screen offers six one-click starter questions. Users can type directly into the message box, continue with follow-ups, or use **More questions** for additional options. Answers appear first; tables, charts and CSV downloads open on demand. **New chat** clears the conversation. Optional AI configuration is under **Settings**. The dedicated SupplyIQ page shares the same conversation and keeps its filter controls collapsed by default.
+
+Conversation state is local to the user session, shared between the dialog and assistant page, bounded to 20 messages and reset when workbook/filter/classification scope changes. Queued questions are consumed once. A dialog-close callback prevents it from reopening on later page interactions. The original analytical tools and missing-data responses are unchanged.
+
+[Desktop chat preview](docs/screenshots/supplyiq-assistant-chat-desktop.png) · [Mobile chat preview](docs/screenshots/supplyiq-assistant-chat-mobile.png)
+
+The previous interface is preserved at `supplyiq-before-assistant-chat-2026-11-11`. Streamlit 1.66 or newer is required for the tested dialog/scroll-container behaviour. Optional browser acceptance test: `python tests/assistant_browser_smoke.py` with the app running on localhost:8501 and Playwright/Chromium available.
 
 ### Visual polish — October 21, 2026
 

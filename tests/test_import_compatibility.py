@@ -20,5 +20,5 @@ def test_assistant_works_with_legacy_cached_filter_helpers(monkeypatch):
     assert not app.exception
     app.button(key="summary_supplyiq").click().run()
     assert not app.exception
-    assert app.radio(key="workspace").value == "SupplyIQ assistant"
+    assert app.radio(key="workspace").value == "Executive overview"
     assert len(app.chat_message) == 2

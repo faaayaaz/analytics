@@ -1,6 +1,5 @@
 import hashlib
 from html import escape
-import os
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -10,9 +9,7 @@ import streamlit as st
 from .kpi_calculations import kpis, monthly_demand, group_summary, executive_insights
 from .abc_xyz_analysis import classify, RECOMMENDATIONS
 from .forecasting import forecast
-from .ai_assistant import answer, FOLLOWUPS
 from .usability import set_scenario, navigate
-from .assistant_actions import queue_question
 from .presentation import display_table
 from .visualizations import show, line, bar
 from .palette import NAVY, NAVY_BAR, GOLD, GOLD_LIGHT, SLATE, SEQUENTIAL, DIVERGING
@@ -594,162 +591,9 @@ def forecasting(data, months):
 
 
 def assistant(data, months, thresholds, scope):
-    st.header("SupplyIQ — AI Planning Assistant")
-    st.caption(
-        "Ask questions about your selected data. Answers use calculated results."
-    )
-    key = os.getenv("OPENAI_API_KEY", "")
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    try:
-        if not key:
-            key = st.secrets.get("OPENAI_API_KEY", "")
-        model = st.secrets.get("OPENAI_MODEL", model)
-    except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
-        pass
-    st.success("Ready to help with your selected sales data.", icon=":material/chat:")
-    with st.expander("Optional AI settings"):
-        enabled = st.toggle(
-            "Use configured LLM for question interpretation",
-            value=False,
-            disabled=not bool(key),
-        )
-        if not key:
-            st.info(
-                "The built-in assistant is ready to use without an API key. Try one of the questions below."
-            )
-        if enabled:
-            st.caption(
-                "Your question and prior intent/entity context are sent to the API. Transaction data stays local. Your question, intent context and up to 15 rows of verified aggregate results are sent to the API for interpretation. API output cannot execute queries."
-            )
-    history_key = hashlib.sha256((scope + str(thresholds)).encode()).hexdigest()
-    if st.session_state.get("chat_scope") != history_key:
-        st.session_state.chat_scope = history_key
-        st.session_state.messages = []
-        st.session_state.chat_context = None
-    if st.button("Clear conversation"):
-        st.session_state.messages = []
-        st.session_state.chat_context = None
-    st.caption(
-        "Chat starts fresh when you change filters, the file or group settings, so old answers are not mixed with new selections."
-    )
-    st.subheader("What would you like to know?")
-    st.caption(
-        "Choose a button to get an answer from your selected data, or type your own question below."
-    )
-    quick_questions = [
-        ("Summarize my data", "Summarize the main supply planning insights."),
-        ("Top 10 SKUs", "Which 10 SKUs generated the highest sales in 2024?"),
-        ("Demand variability", "Which products have the biggest demand swings?"),
-        ("Show AZ products", "Which products belong to the AZ category?"),
-        ("Declining categories", "Which categories experienced declining demand?"),
-        ("Unusual demand changes", "Identify significant demand anomalies."),
-    ]
-    for offset in (0, 3):
-        columns = st.columns(3)
-        for column, (label, prompt) in zip(
-            columns, quick_questions[offset : offset + 3]
-        ):
-            column.button(
-                label,
-                key="quick_" + str(offset) + "_" + label,
-                on_click=queue_question,
-                args=(prompt,),
-                width="stretch",
-            )
-    example = st.selectbox(
-        "Try a question",
-        [
-            "Which 10 SKUs generated the highest sales in 2024?",
-            *FOLLOWUPS,
-            "Compare demand patterns across Food and Personal Care.",
-            "What was the monthly demand growth for Brand 10?",
-            "Which SKUs should planners prioritize for investigation?",
-            "Explain the ABC–XYZ classification of product P001.",
-            "Identify significant demand anomalies.",
-            "Summarize the main supply planning insights.",
-            "What inventory should we replenish?",
-        ],
-    )
-    submit = st.button("Analyze selected question")
-    question = st.chat_input(
-        "Ask about sales, demand, variability or planning priorities"
-    )
-    if submit:
-        question = example
-    queued = st.session_state.pop("assistant_pending_question", None)
-    if not question and queued:
-        question = queued
-    if question:
-        with st.spinner("Calculating from selected data…"):
-            result = answer(
-                question,
-                data,
-                months,
-                thresholds,
-                st.session_state.get("chat_context"),
-                key if enabled else None,
-                model,
-            )
-        st.session_state.messages.extend(
-            [{"role": "user", "text": question}, {"role": "assistant", **result}]
-        )
-        st.session_state.chat_context = result["context"]
-        st.session_state.messages = st.session_state.messages[-20:]
-    for i, message in enumerate(st.session_state.messages):
-        with st.chat_message(message["role"]):
-            st.write(message["text"])
-            if message["role"] == "assistant":
-                st.caption(message["notice"])
-                table = message.get("table")
-                if table is not None:
-                    display_table(table, hide_index=True, width="stretch")
-                    csv_download(
-                        "Download verified result",
-                        table,
-                        "supplyiq_result.csv",
-                        f"chat_csv_{i}",
-                    )
-                    chart = message.get("chart")
-                    if chart and not table.empty:
-                        kind, x, y = chart
-                        fig = (
-                            line(
-                                table,
-                                x,
-                                y,
-                                "Results from your data",
-                                "division" if kind == "comparison" else None,
-                            )
-                            if kind in ["line", "comparison"]
-                            else bar(table, x, y, "Results from your data")
-                        )
-                        show(fig, key=f"chat_chart_{i}")
-                st.caption("Follow up: " + " • ".join(FOLLOWUPS))
-    if st.session_state.messages:
-        st.markdown("**Keep exploring**")
-        followups = st.columns(3)
-        for i, (column, label, prompt) in enumerate(
-            zip(
-                followups,
-                ["Review priorities", "Monthly demand", "Explain missing stock data"],
-                [
-                    "Which SKUs should planners prioritize for investigation?",
-                    "Show monthly demand growth",
-                    "What inventory should we replenish?",
-                ],
-            )
-        ):
-            column.button(
-                label,
-                key=f"followup_{i}",
-                on_click=queue_question,
-                args=(prompt,),
-                width="stretch",
-            )
-    with st.expander("How SupplyIQ answers questions"):
-        st.write(
-            "SupplyIQ calculates answers from the sales data matching your filters. It uses a fixed set of safe calculations. The optional AI service helps understand questions and explain results. If that service is unavailable, built-in analysis still works. Stock levels, supplier delivery times and order requirements are not available in this file."
-        )
+    from .assistant_ui import render_assistant
+
+    render_assistant(data, months, thresholds, scope)
 
 
 def quality(data, report, filtered, months):

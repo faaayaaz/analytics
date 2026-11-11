@@ -4,8 +4,8 @@ import streamlit as st
 
 
 def open_assistant(question=None):
-    """Open the assistant; optional questions are answered using the current scope."""
-    st.session_state["workspace"] = "SupplyIQ assistant"
+    """Open the dashboard chat dialog without changing the active page."""
+    st.session_state["assistant_dialog_open"] = True
     if question:
         st.session_state["assistant_pending_question"] = question
 

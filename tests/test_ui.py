@@ -28,9 +28,7 @@ def test_all_pages_and_filters():
             assert not app.exception
         if page == "SupplyIQ assistant":
             next(
-                button
-                for button in app.button
-                if button.label == "Analyze selected question"
+                button for button in app.button if button.label == "Top 10 SKUs"
             ).click().run()
             assert not app.exception
             assert len(app.chat_message) == 2
@@ -101,7 +99,7 @@ def test_supplyiq_launcher_and_question_buttons():
     app.multiselect(key="filter_division").set_value(["Food"]).run()
     app.button(key="summary_supplyiq").click().run()
     assert not app.exception
-    assert app.radio(key="workspace").value == "SupplyIQ assistant"
+    assert app.radio(key="workspace").value == "Executive overview"
     assert len(app.chat_message) == 2
     assert "193,130,712.74" in app.chat_message[1].markdown[0].value
     assert "assistant_pending_question" not in app.session_state
@@ -117,5 +115,28 @@ def test_supplyiq_launcher_and_question_buttons():
     app.sidebar.radio[0].set_value("Executive overview").run()
     app.button(key="open_supplyiq").click().run()
     assert not app.exception
-    assert app.radio(key="workspace").value == "SupplyIQ assistant"
+    assert app.radio(key="workspace").value == "Executive overview"
     assert len(app.chat_message) == 6
+
+
+def test_assistant_typed_input_reset_and_filter_scope():
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=120).run()
+    app.sidebar.radio[0].set_value("SupplyIQ assistant").run()
+    assert not app.exception
+    assert len(app.chat_input) == 1
+    app.chat_input[0].set_value("Which 10 SKUs generated the highest sales?").run()
+    assert not app.exception
+    assert len(app.chat_message) == 2
+    app.button(key="supplyiq_page_new").click().run()
+    assert not app.exception
+    assert len(app.chat_message) == 0
+    next(b for b in app.button if b.label == "Demand variability").click().run()
+    assert not app.exception
+    assert app.session_state["chat_context"]["intent"] == "volatile"
+    app.multiselect(key="filter_division").set_value(["Food"]).run()
+    assert not app.exception
+    assert len(app.chat_message) == 0
+    app.chat_input[0].set_value("What inventory should we replenish?").run()
+    assert not app.exception
+    assert len(app.chat_message) == 2
+    assert "not provided" in app.chat_message[1].markdown[0].value
