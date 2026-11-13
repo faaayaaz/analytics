@@ -36,9 +36,57 @@ def csv_download(label, data, name, key):
     )
 
 
-def overview(data, months):
+def overview(
+    data,
+    months,
+    reference_data=None,
+    thresholds=(80, 95, 0.5, 1),
+    scope="",
+    available_months=None,
+):
     """Four headline metrics, one main trend, an action rail, then comparisons."""
-    st.header("Executive overview")
+    from .period_comparison import compare_period
+    from .reporting import planning_brief
+
+    title, tools = st.columns([4, 1], vertical_alignment="center")
+    title.header("Executive overview")
+    with tools.popover("Review tools", icon=":material/tune:", width="stretch"):
+        compare = st.toggle(
+            "Compare with previous period", key="overview_compare", value=False
+        )
+        st.caption(
+            "Equal-length, consecutive periods using the same product/customer filters. Previous data must be within 2024."
+        )
+        if st.button("Prepare planning brief", key="prepare_brief", width="stretch"):
+            with st.spinner("Preparing your selected-data brief…"):
+                st.session_state["prepared_brief"] = (
+                    scope + str(thresholds),
+                    planning_brief(data, months, thresholds),
+                )
+        prepared = st.session_state.get("prepared_brief")
+        if prepared and prepared[0] == scope + str(thresholds):
+            st.download_button(
+                "Download planning brief",
+                prepared[1],
+                file_name="supplyiq_planning_brief.zip",
+                mime="application/zip",
+                key="planning_brief_export",
+                width="stretch",
+            )
+            st.caption(
+                "Contains a readable summary, KPI totals, monthly trends, segmentation and filter metadata. No external publishing."
+            )
+    comparison = (
+        compare_period(
+            reference_data if reference_data is not None else data,
+            months,
+            available_months,
+        )
+        if compare
+        else None
+    )
+    if comparison and not comparison["available"]:
+        st.caption("Previous-period comparison: " + comparison["reason"])
     metrics = kpis(data, months)
     m = monthly_demand(data, sorted(months))
     for i, (column, (name, value)) in enumerate(
@@ -58,7 +106,17 @@ def overview(data, months):
                 if "%" in name
                 else f"{value:,.0f}"
             )
-            st.metric(name, text, help=DEFINITIONS[name])
+            delta = None
+            if (
+                comparison
+                and comparison["available"]
+                and pd.notna(comparison["deltas"][name])
+            ):
+                suffix = "pp" if name == "Gross Margin %" else "%"
+                delta = f"{comparison['deltas'][name]:+.1f}{suffix} vs {comparison['label']}"
+            st.metric(
+                name, text, delta=delta, delta_color="off", help=DEFINITIONS[name]
+            )
     trend, attention = st.columns([2.05, 1])
     divisions = group_summary(data, "division")
     insights = executive_insights(data, months)
@@ -91,6 +149,7 @@ def overview(data, months):
             fillcolor="rgba(185,145,70,.10)",
         )
         fig.update_layout(height=310)
+        fig.update_xaxes(dtick="M1", tickformat="%b\n%Y")
         description = (
             "Each point shows sales after returns in AED for a selected month."
             if field == "sales"
@@ -309,6 +368,56 @@ def intelligence(data, months, thresholds):
     )
     a, b, x, y = thresholds
     table = classify(data, months, a, b, x, y)
+
+    def reset_explorer():
+        for key, value in {
+            "sku_search": "",
+            "workbench_abc": [],
+            "workbench_xyz": [],
+            "workbench_focus": "All products",
+            "workbench_sort": "Net sales ↓",
+        }.items():
+            st.session_state[key] = value
+        st.session_state.pop("detail_product", None)
+        st.session_state.pop("last_sku_row", None)
+
+    def explore_segment(value):
+        reset_explorer()
+        st.session_state["workbench_abc"] = [value[0]]
+        st.session_state["workbench_xyz"] = [value[1]]
+
+    exception_mask = (
+        (table["segment"] == "AZ")
+        | table["monthly_demand_growth_pct"].abs().ge(20)
+        | table["negative_quantity_rate_pct"].gt(5)
+        | table["abc"].eq("N")
+        | table["xyz"].eq("N")
+    )
+    eligible_revenue = table["sales"].clip(lower=0).sum()
+    a_share = (
+        table.loc[table["abc"].eq("A"), "sales"].sum() / eligible_revenue * 100
+        if eligible_revenue > 0
+        else np.nan
+    )
+    summary = st.columns(4)
+    summary[0].metric("SKUs in selection", f"{len(table):,}", border=True)
+    summary[1].metric(
+        "High-value volatile SKUs (AZ)",
+        f"{table['segment'].eq('AZ').sum():,}",
+        border=True,
+    )
+    summary[2].metric(
+        "A share of eligible revenue",
+        "N/A" if pd.isna(a_share) else f"{a_share:.1f}%",
+        border=True,
+        help="Share of positive net SKU revenue assigned to class A. Boundary-crossing products can take the share beyond the chosen cutoff.",
+    )
+    summary[3].metric(
+        "SKUs with exception signals",
+        f"{exception_mask.sum():,}",
+        border=True,
+        help="AZ products, latest adjacent-month changes of at least 20%, negative quantity rate above 5%, or unclassified revenue/demand. These are review signals, not order instructions.",
+    )
     with st.expander("How ABC–XYZ groups work"):
         st.info(
             f"ABC groups products by sales value: A covers roughly the first {a:g}% of positive sales, B continues up to {b:g}%, and C covers the rest. A product that crosses a cutoff stays in the group where it started. XYZ shows how steady demand is: X = steady, Y = some changes, Z = large changes. We use your {len(months)} selected months and count months with no sales as zero. N means sales or average demand is zero or less, so that product cannot join the usual groups."
@@ -372,6 +481,13 @@ def intelligence(data, months, thresholds):
             "Explore planning segment", list(RECOMMENDATIONS), key="matrix_segment"
         )
         st.success(RECOMMENDATIONS[segment])
+        st.button(
+            "Use this segment in explorer",
+            key="apply_workbench_segment",
+            on_click=explore_segment,
+            args=(segment,),
+            width="stretch",
+        )
         chosen = table.loc[table.segment == segment]
         st.write(f"{len(chosen)} products · AED {chosen.sales.sum():,.2f} net sales")
         display_table(
@@ -381,11 +497,7 @@ def intelligence(data, months, thresholds):
         )
     with r:
         st.subheader("Planning alerts")
-        alerts = table.loc[
-            table.planning_priority.str.contains(
-                "Investigate|Validate|negative|nonpositive", case=False
-            )
-        ]
+        alerts = table.loc[exception_mask]
         st.write(f"{len(alerts)} products have exception signals.")
         display_table(
             alerts[["product", "segment", "planning_priority"]].head(25),
@@ -395,19 +507,114 @@ def intelligence(data, months, thresholds):
         st.caption(
             "We flag monthly rises or falls of at least 20%, returned/credited units above 5%, important products with uneven demand (AZ), and sales or average units of zero or less. Download the full list for review."
         )
-    st.subheader("SKU explorer")
-    search = st.text_input("Search product, brand or category", key="sku_search")
-    visible = table
+    heading, reset = st.columns([4, 1], vertical_alignment="center")
+    heading.subheader("SKU explorer")
+    reset.button(
+        "Reset explorer",
+        key="workbench_reset",
+        on_click=reset_explorer,
+        width="stretch",
+    )
+    search = st.text_input(
+        "Search product, brand or category",
+        key="sku_search",
+        placeholder="For example: P001 or Brand 10",
+    )
+    abc_control, xyz_control, focus_control, sort_control = st.columns([1, 1, 2, 1.5])
+    abc_classes = abc_control.multiselect(
+        "ABC class",
+        ["A", "B", "C", "N"],
+        key="workbench_abc",
+        placeholder="All classes",
+    )
+    xyz_classes = xyz_control.multiselect(
+        "XYZ class",
+        ["X", "Y", "Z", "N"],
+        key="workbench_xyz",
+        placeholder="All classes",
+    )
+    focus = focus_control.selectbox(
+        "Planning focus",
+        [
+            "All products",
+            "Exception signals",
+            "High-value volatile (AZ)",
+            "High-value steady (AX)",
+            "Demand drop ≥20%",
+            "Demand rise ≥20%",
+            "Negative quantity rate >5%",
+            "Low contribution (C)",
+            "Unclassified (N)",
+        ],
+        key="workbench_focus",
+    )
+    ordering = sort_control.selectbox(
+        "Sort products by",
+        [
+            "Net sales ↓",
+            "Demand CV ↓",
+            "Demand growth ↓",
+            "Demand growth ↑",
+            "Negative quantity rate ↓",
+            "Product code ↑",
+        ],
+        key="workbench_sort",
+    )
+    mask = pd.Series(True, index=table.index)
     if search:
-        visible = table.loc[
+        mask &= (
             table[["product", "brand", "category"]]
             .astype(str)
-            .apply(lambda s: s.str.contains(search, case=False, regex=False))
+            .apply(lambda values: values.str.contains(search, case=False, regex=False))
             .any(axis=1)
-        ]
-    st.caption(
-        "Select a row to see that product’s monthly demand below. Search only changes this table; the download still includes every product matching your selected filters."
+        )
+    if abc_classes:
+        mask &= table["abc"].isin(abc_classes)
+    if xyz_classes:
+        mask &= table["xyz"].isin(xyz_classes)
+    focus_masks = {
+        "Exception signals": exception_mask,
+        "High-value volatile (AZ)": table["segment"].eq("AZ"),
+        "High-value steady (AX)": table["segment"].eq("AX"),
+        "Demand drop ≥20%": table["monthly_demand_growth_pct"].le(-20),
+        "Demand rise ≥20%": table["monthly_demand_growth_pct"].ge(20),
+        "Negative quantity rate >5%": table["negative_quantity_rate_pct"].gt(5),
+        "Low contribution (C)": table["abc"].eq("C"),
+        "Unclassified (N)": table["abc"].eq("N") | table["xyz"].eq("N"),
+    }
+    if focus in focus_masks:
+        mask &= focus_masks[focus]
+    sort_column, ascending = {
+        "Net sales ↓": ("sales", False),
+        "Demand CV ↓": ("demand_cv", False),
+        "Demand growth ↓": ("monthly_demand_growth_pct", False),
+        "Demand growth ↑": ("monthly_demand_growth_pct", True),
+        "Negative quantity rate ↓": ("negative_quantity_rate_pct", False),
+        "Product code ↑": ("product", True),
+    }[ordering]
+    sort_fields = (
+        [sort_column] if sort_column == "product" else [sort_column, "product"]
     )
+    visible = (
+        table.loc[mask]
+        .sort_values(
+            sort_fields,
+            ascending=[ascending] if len(sort_fields) == 1 else [ascending, True],
+            na_position="last",
+        )
+        .copy()
+    )
+    st.caption(
+        f"Showing {len(visible):,} of {len(table):,} SKUs. Explorer controls combine; classification stays relative to the dashboard filters, not this smaller view."
+    )
+    if visible.empty:
+        st.info(
+            "No SKUs match these explorer controls. Reset the explorer or choose a broader class/focus."
+        )
+    else:
+        st.caption(
+            "Select a row to open that product’s demand history below. A review signal is a reason to investigate, not a replenishment instruction."
+        )
     table_key = (
         "sku_workbench_"
         + hashlib.sha256(
@@ -421,27 +628,72 @@ def intelligence(data, months, thresholds):
         selection_mode="single-row",
         hide_index=True,
         width="stretch",
+        column_order=[
+            "product",
+            "abc",
+            "xyz",
+            "sales",
+            "quantity",
+            "demand_cv",
+            "monthly_demand_growth_pct",
+            "planning_priority",
+            "brand",
+            "division",
+            "category",
+            "average_monthly_demand",
+            "gross_margin_pct",
+            "negative_quantity_rate_pct",
+        ],
         column_config={
-            "demand_cv": st.column_config.NumberColumn(format="%.3f"),
-            "sales": st.column_config.NumberColumn(format="%.2f"),
+            "demand_cv": st.column_config.NumberColumn(
+                format="%.3f",
+                help="How much monthly demand changes relative to its positive average. Lower values mean steadier demand.",
+            ),
+            "sales": st.column_config.NumberColumn(
+                format="%.2f", help="Net sales after returns and credits, in AED."
+            ),
         },
     )
-    csv_download(
-        "Download ABC–XYZ & planning signals",
-        table,
-        "sku_segmentation.csv",
-        "seg_export",
-    )
+    selected_export, full_export = st.columns(2)
+    with selected_export:
+        st.download_button(
+            "Download explorer view",
+            visible.to_csv(index=False).encode("utf-8-sig"),
+            file_name="sku_workbench.csv",
+            mime="text/csv",
+            key="workbench_export",
+            disabled=visible.empty,
+        )
+    with full_export:
+        csv_download(
+            "Download ABC–XYZ & planning signals",
+            table,
+            "sku_segmentation.csv",
+            "seg_export",
+        )
+    if visible.empty:
+        st.session_state.pop("detail_product", None)
+        st.session_state.pop("last_sku_row", None)
+        return
     if event.selection.rows:
         row_index = event.selection.rows[0]
         token = (table_key, row_index)
         if st.session_state.get("last_sku_row") != token and row_index < len(visible):
             st.session_state["detail_product"] = visible.iloc[row_index]["product"]
             st.session_state["last_sku_row"] = token
-    if st.session_state.get("detail_product") not in table["product"].tolist():
+    products = visible["product"].tolist()
+    if st.session_state.get("detail_product") not in products:
         st.session_state.pop("detail_product", None)
-    sku = st.selectbox(
-        "Open product demand history", table["product"].tolist(), key="detail_product"
+    sku = st.selectbox("Open product demand history", products, key="detail_product")
+    chosen_sku = visible.loc[visible["product"].eq(sku)].iloc[0]
+    st.caption(
+        f"{sku} · {chosen_sku['brand']} · {chosen_sku['category']} · ABC–XYZ: {chosen_sku['segment']}"
+    )
+    st.info(
+        RECOMMENDATIONS.get(
+            chosen_sku["segment"],
+            "Review sales and returns: revenue or average demand is zero or less, so the standard matrix does not apply.",
+        )
     )
     selected = data.loc[data["product"] == sku]
     show(
@@ -458,6 +710,8 @@ def intelligence(data, months, thresholds):
 
 
 def forecasting(data, months):
+    from .forecasting import compare_models, forecast_review_bundle
+
     st.header("Demand forecasting")
     st.warning(
         "These forecasts are examples, not quantities to order. We have only one year of adjusted assessment data, so we cannot confirm patterns that repeat each year. Current stock, supplier delivery times and customer service targets are not provided."
@@ -468,12 +722,17 @@ def forecasting(data, months):
         horizontal=True,
     )
     subset = data
+    entity = "Selected portfolio"
     if grain != "Selected portfolio":
         col = "category" if grain == "Category" else "product"
+        options = sorted(data[col].unique())
+        entity_key = "forecast_entity_" + col
+        if st.session_state.get(entity_key) not in options:
+            st.session_state.pop(entity_key, None)
         entity = st.selectbox(
             "Select category or SKU",
-            sorted(data[col].unique()),
-            key="forecast_entity_" + col,
+            options,
+            key=entity_key,
         )
         subset = data.loc[data[col] == entity]
     method = st.selectbox(
@@ -497,6 +756,7 @@ def forecasting(data, months):
     m = monthly_demand(subset, sorted(months))
     try:
         out, back, metrics = forecast(m, method, scenario)
+        comparison, paths = compare_models(m)
     except ValueError as exc:
         st.info(str(exc))
         return
@@ -530,13 +790,15 @@ def forecasting(data, months):
         ("baseline", "Baseline estimate", GOLD),
         ("scenario_estimate", f"Scenario estimate ({scenario:+d}%)", SLATE),
     ]:
+        if col == "scenario_estimate" and scenario == 0:
+            continue
         fig.add_trace(
             go.Scatter(
                 x=out.month,
                 y=out[col],
                 name=label,
                 mode="lines+markers",
-                line=dict(dash="dash", color=color),
+                line=dict(dash="dash" if col == "baseline" else "dot", color=color),
             )
         )
     fig.add_vline(
@@ -544,11 +806,23 @@ def forecasting(data, months):
         line_dash="dot",
         line_color="#aab4c0",
     )
+    fig.add_vrect(
+        x0=pd.Timestamp("2025-01-01").timestamp() * 1000,
+        x1=pd.Timestamp("2025-03-15").timestamp() * 1000,
+        fillcolor="rgba(185,145,70,.07)",
+        line_width=0,
+        layer="below",
+    )
     fig.update_layout(
         title="Historical net demand and Jan–Mar 2025 estimates",
         yaxis_title="Net demand (EA)",
     )
     show(fig)
+    st.caption(
+        "The shaded area contains estimates for January–March 2025. Solid navy is observed 2024 demand; "
+        "gold dashes are the baseline. A dotted scenario line appears when the assumption differs from 0%."
+    )
+    st.subheader("How dependable is this starting point?")
     cols = st.columns(4)
     for col, (name, value) in zip(cols, list(metrics.items())[:4]):
         help_text = {
@@ -567,24 +841,114 @@ def forecasting(data, months):
         f"We tested the method on {metrics['Backtest periods']} past months, predicting each month using only earlier data. MAE is the average size of the error in units. WAPE is total absolute error ÷ total absolute actual units × 100. Bias uses the same total to show whether estimates are too high (+) or too low (−). Your growth/decline assumption is not part of this test."
     )
     display_table(out, hide_index=True, width="stretch")
+    estimate_export = out.assign(
+        method=method,
+        scenario_pct=scenario,
+        scope=grain,
+        entity=entity,
+        quantity_type="signed_net_demand",
+        unit="EA",
+        history_start=m.month.min().strftime("%Y-%m-%d"),
+        history_end=m.month.max().strftime("%Y-%m-%d"),
+        observation_months=len(m),
+        status="illustrative_estimate_not_purchase_requirement",
+    )
     csv_download(
         "Download forecast estimates",
-        out.assign(
-            method=method,
-            scenario_pct=scenario,
-            scope=grain,
-            entity="Selected portfolio" if grain == "Selected portfolio" else entity,
-        ),
+        estimate_export,
         "forecast_estimates.csv",
         "forecast_export",
     )
-    with st.expander("Compare backtests and inspect actual errors"):
-        comparison = []
-        for name in ["3-month moving average", "Simple exponential smoothing"]:
-            _, _, result = forecast(m, name, scenario)
-            comparison.append({"model": name, **result})
-        display_table(pd.DataFrame(comparison), hide_index=True, width="stretch")
+    one_step = comparison.loc[comparison.horizon_months == 1]
+    best = one_step.sort_values(["MAE", "model"]).iloc[0]
+    if one_step["MAE"].nunique() == 1:
+        st.info(
+            "Both methods have the same one-month historical MAE in this selection. This does not guarantee equal future performance."
+        )
+    else:
+        st.info(
+            f"{best['model']} has the lower one-month historical MAE ({best['MAE']:,.2f} EA) "
+            f"across the same {int(best['test_origins'])} test months. This is a comparison within this selection, "
+            "not a guarantee of future accuracy or a recommendation to place orders."
+        )
+    with st.expander("Compare methods and inspect forecast errors"):
+        st.markdown("**One-month predictions — same test months for both methods**")
+        display_table(
+            one_step.drop(columns=["horizon_months"]), hide_index=True, width="stretch"
+        )
+        st.markdown("**Complete three-month forecast paths**")
+        three_step = comparison.loc[comparison.horizon_months == 3]
+        display_table(
+            three_step.drop(columns=["horizon_months"]),
+            hide_index=True,
+            width="stretch",
+        )
+        st.caption(
+            f"Each method makes {int(three_step.iloc[0].test_origins)} complete three-month forecasts, "
+            "starting at the same historical dates. Calendar months overlap across these paths, so "
+            "forecast_values is a count of predictions, not a count of independent observed months. "
+            "Errors combine all three leads; no 2025 actuals are available."
+        )
+        st.markdown("**Selected method: observed one-month errors**")
         display_table(back, hide_index=True, width="stretch")
+        csv_download(
+            "Download selected-method backtest",
+            back.assign(model=method),
+            "forecast_backtest.csv",
+            "backtest_export",
+        )
+        csv_download(
+            "Download model comparison",
+            comparison,
+            "forecast_model_comparison.csv",
+            "comparison_export",
+        )
+    metadata = {
+        "scope": grain,
+        "entity": entity,
+        "method": method,
+        "scenario_pct": scenario,
+        "history_months": m.month.dt.strftime("%Y-%m-%d").tolist(),
+        "forecast_months": out.month.dt.strftime("%Y-%m-%d").tolist(),
+        "filtered_transactions": len(subset),
+        "filtered_skus": int(subset["product"].nunique()),
+        "filter_values": {
+            column: sorted(subset[column].unique().tolist())
+            for column in [
+                "division",
+                "category",
+                "brand",
+                "product",
+                "customer_type",
+                "country",
+                "channel",
+            ]
+            if column in subset
+        },
+        "unit": "EA",
+        "quantity_type": "signed_net_demand",
+        "returns_included": True,
+        "scenario_rule": "baseline * (1 + scenario_pct / 100)",
+        "one_step_test_origins": int(one_step.iloc[0].test_origins),
+        "three_step_test_origins": int(three_step.iloc[0].test_origins),
+        "three_step_paths_overlap": True,
+        "limitations": [
+            "Only selected 2024 monthly history is used.",
+            "January–March 2025 values are estimates, not actuals or purchase requirements.",
+            "No learned annual seasonality, inventory, supplier lead times or confidence bounds.",
+            "Historical test errors do not guarantee future results.",
+        ],
+    }
+    st.download_button(
+        "Download forecast review pack",
+        forecast_review_bundle(
+            estimate_export, back.assign(model=method), comparison, paths, metadata
+        ),
+        file_name="supplyiq_forecast_review.zip",
+        mime="application/zip",
+        key="forecast_review_pack",
+        help="Includes estimates, model comparisons, all test paths and the filters/assumptions used.",
+    )
     st.info(
         "Planner action: investigate large customer orders, promotions and returns before applying a scenario. Assess forecast uncertainty with more history; no unsupported confidence interval is shown."
     )
@@ -597,15 +961,43 @@ def assistant(data, months, thresholds, scope):
 
 
 def quality(data, report, filtered, months):
+    from .reporting import review_records
+
     st.header("Data quality & totals")
+    flagged = review_records(filtered)
+    counters = st.columns(4)
+    counters[0].metric("Selected transactions", f"{len(filtered):,}", border=True)
+    counters[1].metric(
+        "Selected SKUs", f"{filtered['product'].nunique():,}", border=True
+    )
+    counters[2].metric("Selected rows to review", f"{len(flagged):,}", border=True)
+    counters[3].metric(
+        "Source totals reconciled", "Yes" if report["reconciled"] else "No", border=True
+    )
     st.success(
         "Sales records match the product and customer lists. Row counts and totals are unchanged."
         if report["reconciled"]
         else "Some totals do not match and need checking."
     )
     st.caption(
-        "Workbook validation cover the whole workbook. Your filtered results are shown separately."
+        "Workbook validation covers the whole workbook. Selected-data results and review records follow your current filters."
     )
+    with st.expander("Inspect flagged records in your selection"):
+        st.caption(
+            "These are review candidates, not confirmed errors. Negative returns alone are expected and are not flagged. Source rows are retained unchanged."
+        )
+        if flagged.empty:
+            st.success(
+                "No sign differences, exact repeated rows or nonzero values with zero quantity in this selection."
+            )
+        else:
+            display_table(flagged, hide_index=True, width="stretch")
+            csv_download(
+                "Download flagged records",
+                flagged,
+                "records_for_review.csv",
+                "issue_records_export",
+            )
     l, r = st.columns(2)
     with l:
         st.subheader("Workbook validation")

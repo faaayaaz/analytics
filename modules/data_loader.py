@@ -2,7 +2,12 @@
 
 from io import BytesIO
 from pathlib import Path
+from zipfile import BadZipFile
+from xml.etree.ElementTree import ParseError
+import re
+import numpy as np
 import pandas as pd
+from openpyxl.utils.exceptions import InvalidFileException
 
 DEFAULT_PATH = (
     Path(__file__).resolve().parents[1] / "data/Assignment_Supply_Planner_Consumer.xlsx"
@@ -37,10 +42,38 @@ MONTHS = pd.date_range("2024-01-01", periods=12, freq="MS")
 
 def load_workbook(source=DEFAULT_PATH):
     source = BytesIO(source) if isinstance(source, bytes) else source
-    sheets = pd.read_excel(source, sheet_name=None)
+    try:
+        sheets = pd.read_excel(source, sheet_name=None, engine="openpyxl")
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        SyntaxError,
+        KeyError,
+        BadZipFile,
+        InvalidFileException,
+        ParseError,
+    ):
+        raise ValueError(
+            "The workbook could not be read. Upload a valid, unencrypted .xlsx file with the four assessment sheets."
+        ) from None
     required = {"Sales 2024", "Products", "Customers", "About the data"}
     if not required.issubset(sheets):
         raise ValueError("Workbook must contain: " + ", ".join(sorted(required)))
+    # Pandas adds .1/.2 suffixes to repeated Excel headers. Reject ambiguous
+    # required fields instead of silently choosing the first column.
+    for name in ["Sales 2024", "Products", "Customers"]:
+        columns = sheets[name].columns
+        if columns.duplicated().any() or any(
+            isinstance(column, str)
+            and (match := re.fullmatch(r"(.+)\.\d+", column))
+            and match.group(1) in RENAME
+            and match.group(1) in columns
+            for column in columns
+        ):
+            raise ValueError(
+                "Required workbook columns are repeated. Give every field one unique header."
+            )
     s, p, c = [
         sheets[k].rename(columns=RENAME).copy()
         for k in ["Sales 2024", "Products", "Customers"]
@@ -66,6 +99,28 @@ def load_workbook(source=DEFAULT_PATH):
         or not {"customer", "country", "customer_type", "channel"}.issubset(c)
     ):
         raise ValueError("Required workbook columns are missing.")
+    if any(frame.columns.duplicated().any() for frame in [s, p, c]):
+        raise ValueError(
+            "Workbook columns have conflicting names. Give every required field one unique header."
+        )
+    if s.empty or p.empty or c.empty:
+        raise ValueError(
+            "Sales, Products and Customers must each contain at least one record."
+        )
+
+    # Whitespace-only cells are missing values too. Preserve nonblank identifiers
+    # exactly; do not silently merge keys by trimming or changing their case.
+    for frame in [s, p, c]:
+        for column in set(RENAME.values()).intersection(frame.columns):
+            if column not in ["month", "quantity", "sales", "cost"]:
+                blank = frame[column].map(
+                    lambda value: isinstance(value, str) and not value.strip()
+                )
+                frame.loc[blank, column] = pd.NA
+    if s[["product", "customer"]].isna().any().any():
+        raise ValueError(
+            "Every sales record needs a nonblank product code and customer key."
+        )
     report = {
         "sales_rows": len(s),
         "product_rows": len(p),
@@ -92,10 +147,17 @@ def load_workbook(source=DEFAULT_PATH):
     s["month"] = pd.to_datetime(s["month"], errors="coerce")
     report["invalid_dates"] = int((s.month.isna() | ~s.month.isin(MONTHS)).sum())
     for col in ["quantity", "sales", "cost"]:
+        if pd.api.types.is_bool_dtype(s[col]) or (
+            pd.api.types.is_object_dtype(s[col])
+            and s[col].map(lambda value: isinstance(value, (bool, np.bool_))).any()
+        ):
+            raise ValueError(
+                f"{col} contains true/false values instead of numbers; correct the source before analysis."
+            )
         s[col] = pd.to_numeric(s[col], errors="coerce")
-        import numpy as np
-
-        if not np.isfinite(s[col]).all():
+        with np.errstate(over="ignore", invalid="ignore"):
+            total_is_finite = np.isfinite(s[col].sum())
+        if not np.isfinite(s[col]).all() or not total_is_finite:
             raise ValueError(
                 f"{col} contains missing, invalid or non-finite values; correct the source before analysis."
             )
@@ -138,6 +200,13 @@ def load_workbook(source=DEFAULT_PATH):
         )
     report["missing_master_cells"] = int(p.isna().sum().sum() + c.isna().sum().sum())
     report["months_present"] = int(s.month.nunique())
+    report["missing_calendar_months"] = (
+        ", ".join(
+            month.strftime("%Y-%m")
+            for month in MONTHS.difference(pd.DatetimeIndex(s.month.unique()))
+        )
+        or "None"
+    )
     report["negative_quantity_rows"] = int((s.quantity < 0).sum())
     report["sign_mismatch_rows"] = int(
         ((s.quantity * s.sales < 0) | (s.quantity * s.cost < 0)).sum()

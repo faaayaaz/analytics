@@ -44,6 +44,8 @@ h1,h2,h3 {letter-spacing:-.035em;}
 .st-key-kpi_card_0 {background:linear-gradient(125deg,#14253D,#233B53);border-color:#30445B;box-shadow:0 8px 20px #14253D20;}
 .st-key-kpi_card_0 [data-testid="stMetricValue"],.st-key-kpi_card_0 [data-testid="stMetricLabel"] p {color:#ffffff;}
 .st-key-kpi_card_0 .metric-kicker {color:var(--iq-gold-light);}
+.st-key-kpi_card_0 [data-testid="stMetricDelta"] {background:#ffffff12;color:#D9BE82 !important;}
+.st-key-kpi_card_0 [data-testid="stMetricDelta"] * {color:#D9BE82 !important;}
 .st-key-kpi_card_0 [data-testid*="Tooltip"],.st-key-kpi_card_0 [data-testid="stTooltipIcon"] svg,.st-key-kpi_card_0 button,.st-key-kpi_card_0 button svg,.st-key-kpi_card_0 [role="button"],.st-key-kpi_card_0 [role="button"] * {color:#b9c8e1 !important;}
 .st-key-kpi_card_1 {border-top:3px solid #B99146;}
 .st-key-kpi_card_2 {border-top:3px solid #C4A15C;}
@@ -72,6 +74,17 @@ h1,h2,h3 {letter-spacing:-.035em;}
 .st-key-dashboard_trend [data-testid="stVerticalBlock"],.st-key-dashboard_divisions [data-testid="stVerticalBlock"],.st-key-dashboard_products [data-testid="stVerticalBlock"] {gap:10px;}
 [data-testid="stPlotlyChart"] {background:white;border:1px solid var(--iq-border);border-radius:14px;padding:8px;}
 [data-testid="stDataFrame"] {border-radius:12px;overflow:hidden;border:1px solid var(--iq-border);}
+/* Planning-page metric tiles and review controls. Overview anchors/dialogs are excluded. */
+[data-testid="stMain"] [data-testid="stMetric"]:not([class*="st-key-kpi_card_"] [data-testid="stMetric"]):not([role="dialog"] [data-testid="stMetric"]) {background:white;border-color:var(--iq-border);border-radius:12px;padding:14px 16px;min-height:104px;box-shadow:0 2px 8px #14253D03;}
+[data-testid="stMain"] [data-testid="stMetric"]:not([class*="st-key-kpi_card_"] [data-testid="stMetric"]):not([role="dialog"] [data-testid="stMetric"]) [data-testid="stMetricLabel"] p {line-height:1.4;min-height:28px;}
+:is(.st-key-workbench_abc,.st-key-workbench_xyz,.st-key-workbench_focus,.st-key-workbench_sort,.st-key-forecast_entity_product,.st-key-forecast_entity_category) [data-baseweb="select"]>div {background:white;border-color:var(--iq-border);border-radius:9px;min-height:40px;}
+.st-key-sku_search [data-baseweb="input"] {background:white;border-color:var(--iq-border);border-radius:9px;}
+:is(.st-key-workbench_abc,.st-key-workbench_xyz,.st-key-workbench_focus,.st-key-workbench_sort,.st-key-forecast_entity_product,.st-key-forecast_entity_category):focus-within [data-baseweb="select"],.st-key-sku_search:focus-within [data-baseweb="input"] {outline:2px solid var(--iq-gold-light);outline-offset:2px;}
+[class*="st-key-sku_workbench_"] [data-testid="stDataFrame"]:focus-within {outline:2px solid var(--iq-gold-light);outline-offset:2px;}
+:is(.st-key-workbench_export,.st-key-forecast_review_pack) button:not(:disabled) {background:#F1E7D2;border-color:var(--iq-gold);font-weight:600;}
+:is(.st-key-workbench_export,.st-key-forecast_review_pack) button:not(:disabled) * {color:var(--iq-navy);}
+:is(.st-key-workbench_export,.st-key-forecast_review_pack) button:not(:disabled):hover {background:var(--iq-gold-light);}
+.st-key-scenario_pct [role="slider"]:focus-visible {outline:3px solid var(--iq-gold-light);outline-offset:3px;}
 button {border-radius:9px !important;transition:background .16s,box-shadow .16s !important;}
 button:hover {box-shadow:0 3px 10px #14253D0D;}
 button[kind="primary"] {background:#14253D;border-color:#14253D;}

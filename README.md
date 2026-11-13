@@ -1,10 +1,14 @@
-# Consumer Supply Planning Intelligence
+# SupplyIQ — Consumer Supply Planning Intelligence
 
-A working Streamlit assessment dashboard for the uploaded **Assignment_Supply_Planner_Consumer.xlsx**. Five workspaces provide executive metrics, SKU planning intelligence, a forecasting simulator, a conversational analytical assistant, and data quality/exports. All production calculations use the actual workbook; there is no generated demonstration dataset.
+A Streamlit dashboard for the supplied **Assignment_Supply_Planner_Consumer.xlsx**, with executive reporting, SKU prioritization, demand estimates and a conversational assistant. Calculations use the real workbook, including its signed returns and credit notes. No demonstration data, stock balances or supplier information are added.
+
+The interface uses navy, muted gold and warm white, with a focused overview, interactive charts and help beside each measure. Original technical names such as **MoM Demand Growth**, **ABC–XYZ**, **Demand CV**, **MAE** and **WAPE** remain intact; their explanations use simple language.
 
 ## Run locally
 
-Requires Python 3.11 or 3.12. Tested on Python 3.12.
+Use Python **3.12**, the tested version. Python 3.11 is also supported; Python 3.14 has not been validated for this project.
+
+Run these commands in the repository folder:
 
 ```bash
 python -m venv .venv
@@ -13,165 +17,140 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-The supplied workbook is in `data/`. The sidebar can replace it with another workbook using the same four sheets, column schema and 2024 scope. First load parses and validates Excel; subsequent interactions use Streamlit's bounded, content-keyed data cache. The 160,572-row file is supported without API access or external database services.
+On Windows, activate with `.venv\Scripts\activate` instead. Open the local URL printed by Streamlit, normally `http://localhost:8501`.
 
-```bash
-python -m pytest -q
-```
+The original workbook is included in `data/`. It contains 160,572 sales rows, 250 product master keys, 292 customer master keys and twelve months of 2024 history. The sidebar also accepts a replacement `.xlsx` with the same four sheets, required columns and 2024 scope. Loading validates the workbook before analysis; subsequent interactions use a bounded, content-keyed Streamlit data cache. No external database or API key is needed.
 
-## Workspaces
+## Find your way around
 
-- **Executive overview:** four headline KPIs and four optional supporting KPIs with interactive definitions, sales/demand trends, division revenue and margin, top products, categories, channels, growth heatmap and calculated insights.
-- **SKU analysis:** configurable ABC/XYZ boundaries, Pareto, nine-cell matrix, segment exploration, explicit attention criteria, searchable SKU workbench, product histories and segmentation CSV.
-- **Demand forecasting:** selected portfolio, category or SKU; recursive three-month average and fixed-alpha exponential smoothing; rolling backtests; January–March 2025 estimates; growth/decline scenario and CSV export.
-- **SupplyIQ assistant:** real-data natural-language analysis, follow-up context, result tables, charts and downloads. Works without an API key. Optional LLM interpretation uses allowlisted tools and verified aggregate evidence.
-- **Data quality & downloads:** master relationship validation, missing/duplicate checks, financial reconciliation, sign issues, source notes, and filtered transaction/report downloads.
+Global Month, Division, Category, Brand, Product, Customer Type, Country and Sales Channel filters apply to the analytics and assistant. Division → Category → Brand → SKU choices cascade. Quick period controls include **Full year**, **Last 6 months** and **Q4 only**. Empty dimension selections mean all available values; an empty month selection contains no data.
 
-Month, Division, Category, Brand, Product, Customer Type, Country and Sales Channel filters apply consistently to all analytical pages and assistant tools. Cascading dimensions support Division → Category → Brand → SKU exploration. No selected dimension values means “all available”; no selected months means no records. The quality panel explicitly reports full-workbook validation separately from filtered figures.
+If a replacement workbook omits an entire calendar month, the app warns and asks you to choose months present in the source. It does not assume the missing file history represents zero demand. The original workbook has all twelve months.
 
-## SupplyIQ configuration and security
+| Workspace | What you can do |
+| --- | --- |
+| **Executive overview** | Review four headline KPIs, supporting KPIs, sales and demand trends, division performance, leading products, category/channel contributions and calculated planning observations. |
+| **SKU analysis** | Configure ABC/XYZ thresholds, explore Pareto and the nine-cell matrix, combine class/focus filters, sort the SKU explorer and select a product for its history. |
+| **Demand forecasting** | Compare two explainable baseline models, inspect historical forecast errors and simulate January–March 2025 demand changes for a portfolio, category or SKU. |
+| **SupplyIQ assistant** | Ask real-data questions, continue with follow-ups, inspect tables/charts and download results or the current conversation. |
+| **Data quality & downloads** | Inspect workbook checks, reconciliation and flagged records, then download selected records and reports. |
 
-No key is required. Local intent recognition computes top SKUs, demand CV, division comparisons, all nine segments, declining categories, brand trends, SKU details, attention signals, historical anomalies and executive insights. Multi-turn follow-ups such as “What about Brand 10?” reuse the preceding analytical intent. Unsupported questions receive a capability explanation rather than invented answers. Inventory and supplier questions receive a missing-data response.
+Hover over a chart's **About this chart** help indicator for its purpose, units and limitations; tap it on touch screens. Chart points show actual values. Clickable SKU rows open demand history. Empty selections show a useful message instead of an empty chart.
 
-To enable optional OpenAI interpretation, export `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o-mini`), or use an untracked `.streamlit/secrets.toml`:
+## Review and export tools
+
+- **Executive overview → Review tools:** optionally compare the selected consecutive months with the immediately preceding, equal-length period using the same product/customer filters. Both periods must fit within 2024. For example, Q4 compares with July–September; full-year 2024 has no prior year in this workbook. Sales, units and profit use percentage change where valid; margin uses percentage-point change.
+- **Prepare planning brief:** creates a local ZIP containing a readable summary, KPI totals, monthly trends, SKU segmentation and scope/threshold metadata for the current selection. Downloading does not publish it anywhere.
+- **SKU explorer:** combine ABC and XYZ classes, search, planning focus and sorting. Applying a matrix segment narrows the explorer; classifications remain relative to the dashboard population. Export either the visible explorer rows or the complete dashboard-scoped segmentation.
+- **Forecast review pack:** download estimates, the selected model's backtest, one- and three-month model comparisons, all forecast test paths and recorded assumptions together in a ZIP. Individual CSV downloads remain available.
+- **Data quality:** inspect and download selected records with sign differences, exact repeated records or financial values with zero quantity. These are review candidates, not automatically confirmed errors; no source rows are silently removed.
+
+## SupplyIQ assistant
+
+Use **Ask SupplyIQ** or the floating assistant button to open chat while keeping the current dashboard page. **Summarize my selection** starts a calculated summary. The dedicated assistant page shares the same conversation. Starter buttons, **Top 10 SKUs**, **Monthly demand**, **More questions** and a text box make common analyses easy to reach.
+
+Useful questions include:
+
+- “Which 10 SKUs generated the highest sales in 2024?”
+- “Top 5 SKUs by units for Brand 10.”
+- “Which products have the biggest demand swings?”
+- “Compare Food and Personal Care demand.”
+- “Compare P001 and P002 demand history.”
+- “Which products belong to the AZ category?”
+- “What was the monthly demand growth for Brand 10?”
+- “Explain the ABC–XYZ classification of P001.”
+
+Follow-ups such as “What about Brand 10?” reuse the preceding analysis. A new named entity replaces the previous question focus, while dashboard filters always apply. The assistant displays its narrower question focus and preserves dashboard-wide ABC classifications when a question names a brand, category or product. Comparison series include selected months with no sales as zero. Unsupported questions or unavailable years receive an explanation rather than invented figures; stock and supplier questions identify the missing information.
+
+**New chat** clears the conversation. **Settings → Download conversation** saves retained messages and calculated results as a local Markdown file. History is session-local, shared between the page and dialog, limited to 20 messages and reset when the workbook, filters or classification thresholds change. Transcript exports omit internal configuration and redact common API-key/password/token patterns; avoid entering credentials into chat.
+
+### Optional LLM configuration
+
+The built-in assistant works without a paid API. To enable optional OpenAI interpretation, export `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o-mini`), or create an untracked `.streamlit/secrets.toml`:
 
 ```toml
 OPENAI_API_KEY = "your-key-entered-securely"
 OPENAI_MODEL = "gpt-4o-mini"
 ```
 
-Then open **Settings** in SupplyIQ and enable **Use optional AI service**. `.env.example` documents shell variables; `.env` files are **not automatically loaded**. Never commit real credentials. Network access to `api.openai.com` is required for this optional mode.
+Then enable **Settings → Use optional AI service** in SupplyIQ. `.env.example` documents the variables; `.env` files are not automatically loaded. Never commit real credentials. This mode requires access to `api.openai.com`.
 
-The model first chooses an enumerated intent. Local code executes fixed, parameterized DuckDB SELECT templates or controlled Pandas functions; model-generated SQL/code is never executed. A second optional call explains the verified aggregates. It receives the question, context and up to 15 aggregate result rows, not the transaction table. Calculated tables and deterministic narrative remain authoritative; AI interpretation is separately labeled and may need review. API errors fall back to local calculations without exposing credentials or provider error bodies. History is session-local, bounded and cleared on changes to workbook, filter scope or thresholds. No database, writes, external browsing, shell tools or arbitrary model functions are exposed to the assistant.
+Local recognition determines supported analytical intents; an optional model can interpret otherwise unsupported wording and explain verified aggregate results. Analytical execution uses code-owned, parameterized DuckDB `SELECT` templates or controlled Pandas functions. Model-generated SQL, shell commands and arbitrary code are never executed. The optional service receives the question, short context and up to 15 aggregate result rows, not the raw transaction table. AI explanations are separately labelled; calculated results remain authoritative. API failures fall back to built-in analysis without exposing provider errors or credentials. A live API-key integration is not claimed as validated here.
 
-## Analytical definitions and scope
+## Definitions and planning limits
 
-See [methodology](docs/METHODOLOGY.md) for edge cases and forecast assumptions and [verified executive findings](docs/EXECUTIVE_SUMMARY.md) for assessment talking points.
+See [methodology](docs/METHODOLOGY.md) for detailed assumptions and [verified executive findings](docs/EXECUTIVE_SUMMARY.md) for assessment talking points.
 
-- Net sales = signed revenue; net demand = signed quantity, including credits/returns.
-- Gross profit = net sales − signed cost. Gross margin = gross profit / nonzero net sales × 100. Negative revenue margins retain the formula and require careful interpretation.
-- Monthly growth = (current − previous) / previous × 100, only for a positive prior-month quantity and adjacent selected calendar months.
-- Average monthly net demand = selected units / 12, as requested. When months are excluded, this is selected contribution to an annual average; the selected-month mean used for CV is provided separately.
-- Negative transaction quantity rate = absolute negative units / positive units × 100. This is a quantity ratio, not a transaction-count percentage.
-- ABC ranks positive net SKU revenue against total eligible positive SKU revenue; nonpositive products are N. A boundary-crossing SKU stays in the class where its revenue begins, so realized shares can exceed a threshold.
-- XYZ uses population standard deviation / positive mean over the included calendar months. Included months without sales are zero. Excluded months are not manufactured zero demand. Nonpositive means have no CV and use N.
+| Measure | Definition |
+| --- | --- |
+| Net Sales | Sum of signed revenue. |
+| Net Units Sold / net demand | Sum of signed quantities: units sold minus returns. |
+| Gross Profit | Net Sales − signed Cost of Sales. |
+| Gross Margin % | Gross Profit / nonzero Net Sales × 100. Negative-revenue margins require care. |
+| MoM Demand Growth % | (Current − previous quantity) / previous quantity × 100, only for adjacent selected months with positive previous quantity. |
+| Average Monthly Net Demand | Selected net quantity / 12. For a partial-year selection, this is its contribution to the annual average, not its selected-month mean. |
+| Negative Transaction Quantity Rate % | Absolute negative units / positive units × 100. It measures units, not the percentage of transaction rows. |
+| ABC | Rank positive net SKU revenue against eligible positive SKU revenue; defaults A = first 80%, B = next 15%, C = rest. Nonpositive revenue is N. A threshold-crossing SKU stays in the class where its contribution begins. |
+| XYZ | Population standard deviation / positive mean over included months; defaults X ≤ 0.5, Y ≤ 1.0, Z > 1.0. Genuine no-sales months are zero; excluded months are omitted. Nonpositive means have no CV and use N. |
+
+Undefined ratios display **N/A**, not zero. The workbook uses EA throughout, but adding units across SKUs does not imply equivalent pack sizes or volume. Revenue and units remain signed; unusually negative transactions are reasons to investigate, not proof of a cause.
+
+Forecasting requires at least six consecutive selected months ending in December 2024. It compares a recursive three-month moving average with fixed-alpha exponential smoothing. Both models are evaluated using the same historical origins for each one- or three-month design, with MAE, WAPE and bias where defined. Three-month paths overlap, so their forecast counts are not independent calendar months. Only 12 months of history are available: backtest results do not establish future accuracy or learned annual seasonality. January–March 2025 outputs and growth/decline scenarios are **illustrative demand estimates**, never actual sales or purchase requirements.
+
+Inventory on hand, stock movements, lead times and purchase orders are absent. The app therefore cannot establish stock coverage, overstock, stockout risk, service levels or replenishment quantities. Planning signals identify products for investigation.
 
 ## Deploy on Streamlit Community Cloud
 
-1. Review the source and included anonymized workbook, then commit and push this project to your GitHub repository. This delivery does not push or publish automatically.
-2. In Streamlit Community Cloud create an app, choose the repository/branch and set the entrypoint to `app.py` at the project root. Select Python 3.12.
-3. Dependencies install from `requirements.txt`; theme/server settings are in `.streamlit/config.toml`. No database provisioning is needed.
-4. Optionally add `OPENAI_API_KEY` and `OPENAI_MODEL` in the platform's secure Secrets settings. Without them the local assistant remains operational.
-5. After deployment, verify all five pages, a filter change, one assistant question and a CSV download. Cloud deployment itself has not been performed or claimed here.
+1. Use this project's GitHub repository, **`faaayaaz/analytics`**, with the desired version on `main`.
+2. In [Streamlit Community Cloud](https://share.streamlit.io/), create an app, select the repository and `main`, and set the entrypoint to **`app.py`** at the repository root. Choose Python **3.12**.
+3. Dependencies install from `requirements.txt`. Theme/server settings are in `.streamlit/config.toml`; the included workbook must remain in `data/`. No database provisioning is needed.
+4. Optionally add `OPENAI_API_KEY` and `OPENAI_MODEL` in the app's secure Secrets settings. Without them, the local assistant stays operational.
+5. Open the deployed URL and check all five pages, a filter change, an assistant question and a download. For an existing deployment tracking `main`, check its build status after a push and reboot from **Manage app** if needed.
 
-The workbook must remain available at the default path. Treat uploaded business files as sensitive even when the supplied assessment data is anonymized. This is an assessment analytics application, with no authentication or enterprise access-control layer; choose deployment visibility accordingly.
+Pushing source to GitHub and publishing a Streamlit app are separate steps. This documentation does not claim a live Cloud deployment. The app has no authentication or enterprise access-control layer; choose deployment visibility appropriate to the workbook's sensitivity.
 
-## Project structure
+## Validation and project structure
 
-```text
-app.py                         # UI shell, global scope, cached workbook loading
-modules/data_loader.py         # Schema, master joins, validation, filtering
-modules/kpi_calculations.py     # Shared metrics, summaries, dynamic insights
-modules/abc_xyz_analysis.py     # Classification and review signals
-modules/forecasting.py          # Baselines, scenarios, rolling backtests
-modules/ai_assistant.py         # Local intents, fixed DuckDB tools, optional LLM
-modules/assistant_ui.py         # Shared dialog/page conversation interface
-modules/assistant_actions.py    # Open chat and queue analytical questions
-modules/visualizations.py       # Consistent interactive chart rendering
-modules/views.py                # Five page renderers and downloads
-tests/                        # See tests/ for analytical and Streamlit tests
-data/                          # Original assessment workbook
-docs/                          # Methodology, executive summary, validation
+Run the automated analytical and Streamlit tests from the repository folder:
+
+```bash
+python -m pytest -q
 ```
 
-Runtime dependencies are declared in `requirements.txt`; tested versions are recorded in `requirements.lock.txt`. Use `pip install -r requirements.lock.txt` to reproduce the tested direct versions. Optional browser validation uses Playwright and a local Chromium installation; neither is required to run the dashboard.
+Validation covers workbook loading/joins, metric reconciliation, classifications and edge cases, filtered assistant results, forecast backtests, review exports and page interactions. See [validation notes](docs/VALIDATION.md) for recorded evidence and limits. Optional browser checks require Playwright and Chromium; they are not runtime dependencies.
 
-## Usability update and preserved original
+The current local suite passes **85 tests**. GitHub Actions is configured to run the analytical and Streamlit suite on pushes to `main` and pull requests. For live browser checks with the app running, use `python tests/browser_smoke.py`, `python tests/assistant_browser_smoke.py` and `python tests/advancement_browser_smoke.py`.
 
-The original tested dashboard is preserved on GitHub as the annotated tag **`dashboard-v1-original`**, pointing to commit `c7d5a45`. This tag was pushed before any usability edits. Browse or download that version from the repository's Tags list. To inspect it locally without discarding the updated version:
+[Current desktop overview](docs/screenshots/supplyiq-advancements-desktop.png) · [Filtered SKU explorer](docs/screenshots/supplyiq-advancements-explorer.png)
+
+```text
+app.py                         # Navigation, global scope, cached workbook loading
+modules/data_loader.py         # Workbook schema, master joins and validation
+modules/kpi_calculations.py     # Metrics, summaries and calculated insights
+modules/abc_xyz_analysis.py     # Classification and planning signals
+modules/period_comparison.py   # Equal-length comparisons within 2024
+modules/reporting.py           # Local planning brief and flagged-record exports
+modules/forecasting.py         # Models, scenarios, backtests and review pack
+modules/ai_assistant.py         # Local intents, fixed query tools, optional LLM
+modules/assistant_ui.py         # Shared page/dialog chat and transcript download
+modules/views.py                # Analytics workspaces and export controls
+modules/palette.py              # Shared navy/gold chart colours
+tests/                         # Analytical and interface regression checks
+data/                          # Original assessment workbook
+docs/                          # Methodology, verified findings and validation
+```
+
+Runtime dependencies are in `requirements.txt`; tested direct package versions are in `requirements.lock.txt`. Use `pip install -r requirements.lock.txt` to reproduce those versions. Streamlit 1.66 or newer is required for the current chat/dialog controls.
+
+## Saved versions
+
+The version immediately before these advancements is preserved by the tag **`supplyiq-before-advancements-2026-11-13`**. The original dashboard is preserved as **`dashboard-v1-original`**; earlier redesign tags remain in Git history.
+
+To inspect the saved version on a separate local branch:
 
 ```bash
 git fetch origin --tags
-git switch -c review-original dashboard-v1-original
+git switch -c review-before-advancements supplyiq-before-advancements-2026-11-13
 ```
 
-To restore the deployed app later, ask to restore the original tag to `main` through a new commit; avoid force-pushing or deleting newer history.
-
-The updated interface adds:
-
-- One-click **Full year**, **Q4 only**, and **Reset all filters** controls.
-- Automatic removal of incompatible downstream filter choices when drilling into a different division/category.
-- A visible active-filter summary, searchable filter hints, and recovery from an empty month selection.
-- A **New here?** guide with shortcuts to SKU review, forecast scenarios and the assistant.
-- Clickable SKU workbench rows that open the selected product's demand history; manual product selection remains available.
-- **−20% / baseline / +20%** forecast scenario buttons and three-month baseline, scenario and estimated-change summaries.
-
-These controls reuse the original analytical functions and preserve the underlying metric definitions and data.
-
-### Dashboard layout
-
-The current overview follows one reading order:
-
-1. **Filter:** Division, Category and Brand are together in the top filter bar. Period and reset controls share a popover; SKU/customer/market filters remain in the sidebar.
-2. **Summary:** Four headline KPIs are visible by default: Net Sales, Net Units Sold, Gross Profit and Gross Margin.
-3. **Review:** One wide monthly chart sits beside a concise planning panel showing actual demand movement, leading-division sales share and negative quantity rate.
-4. **Compare:** Division performance and Top 10 SKUs appear together below.
-5. **Go deeper:** Supporting KPIs, category/channel breakdowns, monthly growth and individual KPI histories open only when needed.
-
-All eight original KPI calculations remain available. Filters apply to every page and SupplyIQ; units, dates, numerical definitions and CSV exports are unchanged. The sidebar focuses on navigation, data source, advanced filters and help.
-
-The version before this information-hierarchy redesign is preserved as **`supplyiq-before-organization-redesign-2026-11-11`**. Earlier tags remain available. Restore a prior version through a new commit to keep history intact.
-
-### Hover explanations
-
-Every graph has an **About this chart** caption with a hover-help icon. Hover to see what the graph represents, the measures/units, how to interpret colours or axes, and relevant limitations. On touch screens, tap the help indicator. Data points retain their value tooltips with clearer measure labels. Matrix cells explicitly identify ABC class, XYZ class and product count; growth cells identify division, month and percentage. KPI cards retain their definition help icons.
-
-### Plain-language wording
-
-Technical names stay unchanged, including **MoM Demand Growth**, **Active SKUs**, **Net demand**, **Demand CV**, **ABC–XYZ**, **MAE** and **WAPE**. Their explanations, hover help, planning advice and assistant answers use everyday wording. For example, the explanation of net demand says **units sold minus returns**. The sidebar's **Quick word guide** explains common terms. Tables keep their original column identifiers and provide simple column-header help. Detailed formulas remain in the methodology guide. Calculations, group cutoffs and CSV column identifiers remain unchanged; the assistant also understands questions about “uneven demand” or “demand swings.”
-
-### SupplyIQ chat
-
-**Ask SupplyIQ** opens a chat window over the dashboard without changing the active page. A floating button keeps it within reach when scrolling. **Summarize my selection** opens the same window and immediately calculates a summary. Closing the window returns to the current dashboard, preserving its filters and forecast controls.
-
-The welcome screen offers six one-click starter questions. Users can type directly into the message box, continue with follow-ups, or use **More questions** for additional options. Answers appear first; tables, charts and CSV downloads open on demand. **New chat** clears the conversation. Optional AI configuration is under **Settings**. The dedicated SupplyIQ page shares the same conversation and keeps its filter controls collapsed by default.
-
-Conversation state is local to the user session, shared between the dialog and assistant page, bounded to 20 messages and reset when workbook/filter/classification scope changes. Queued questions are consumed once. A dialog-close callback prevents it from reopening on later page interactions. The original analytical tools and missing-data responses are unchanged.
-
-[Desktop chat preview](docs/screenshots/supplyiq-assistant-chat-desktop.png) · [Mobile chat preview](docs/screenshots/supplyiq-assistant-chat-mobile.png)
-
-The previous interface is preserved at `supplyiq-before-assistant-chat-2026-11-11`. Streamlit 1.66 or newer is required for the tested dialog/scroll-container behaviour. Optional browser acceptance test: `python tests/assistant_browser_smoke.py` with the app running on localhost:8501 and Playwright/Chromium available.
-
-### Visual polish — October 21, 2026
-
-The dashboard uses a softer navy/teal palette, clearer spacing, colour accents on KPI cards, an obvious selected-card state and cleaner chart panels. Navigation uses **SKU analysis**, **Demand forecasting** and **Data quality & downloads**. Executive charts are grouped under **Sales & demand**, **Sales breakdown** and **Changes & insights**. Standard KPI names remain unchanged.
-
-Workbook upload, optional AI settings and technical background are kept in collapsible sections. The getting-started guide is below the main content, keeping the top of each page focused on the data and the SupplyIQ buttons. Hover help, the quick word guide and all calculations remain available. The version before this refresh is saved under the GitHub tag `dashboard-before-polish-2026-10-21`.
-
-The earlier visual-polish notes describe saved historical versions. The **Dashboard layout** section above describes the current interface.
-
-### Premium SupplyIQ design — November 11, 2026
-
-The current visual system pairs a midnight-navy sidebar and revenue card with electric-blue sales charts, teal division highlights, lime planning accents and light readable surfaces. The overview keeps its single-canvas layout, original KPI names, filters, calculations and SupplyIQ actions. Planning attention uses a dark panel with short labelled observations. Motion respects reduced-motion preferences and mobile KPI cards remain in two columns.
-
-The leading bar highlight follows the selected division measure; it changes with Net Sales/Gross Margin. All values come from the workbook. No fictional performance deltas, stock statuses or live-data indicators are introduced.
-
-[Desktop preview](docs/screenshots/supplyiq-premium-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-premium-mobile.png)
-
-The previous version, including the existing dev-container configuration, is preserved at `supplyiq-before-premium-redesign-2026-11-11`.
-
-### Organization redesign — November 11, 2026
-
-This release reorganizes the information rather than changing the underlying analysis. Only four headline KPI cards are visible in the default overview. The remaining four are in **Additional KPIs**. The main chart and planning attention share the first analysis row; division/SKU comparisons are below. Chart titles and repeated control labels have been reduced, and Streamlit developer controls use minimal mode.
-
-[Current desktop layout](docs/screenshots/supplyiq-organized-desktop.png) · [Current mobile layout](docs/screenshots/supplyiq-organized-mobile.png)
-
-### Navy & gold theme — November 11, 2026
-
-The current theme uses deep navy (`#14253D`), muted gold (`#B99146`), champagne gold (`#D9BE82`) and warm white (`#F7F6F2`). Division and Top 10 SKU bars use the same treatment: navy bars with a gold leader. Selected controls, card trim, navigation and planning attention use coordinated gold accents; neon/electric-blue/teal accents have been removed.
-
-`modules/palette.py` supplies shared chart colours, categorical shades and matrix scales. Forecasts use navy for actuals, gold for the baseline and slate for the scenario. The monthly-growth heatmap uses gold for decreases, a light neutral midpoint and navy for increases; its hover explanation describes this mapping. The layout, formulas, filters, exports and assistant behaviour are unchanged.
-
-[Current navy & gold desktop preview](docs/screenshots/supplyiq-navy-gold-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-navy-gold-mobile.png)
-
-The previous version is preserved as `supplyiq-before-navy-gold-2026-11-11`.
+Restore a previous version to `main` through a new commit so newer work remains recoverable. Historical screenshots and design notes in `docs/` may depict older versions; this README describes the current navy/gold interface.

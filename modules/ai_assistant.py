@@ -34,7 +34,11 @@ def segment_in(question):
         if (
             token.lower() != "by"
             or token == "BY"
-            or re.search(r"segment|class|category|belong", question, re.I)
+            or re.search(
+                r"(?:segment|class|group)\s*[:=]?\s+by\b|belong\s+to\s+(?:the\s+)?by\s+(?:category|class|group)",
+                question,
+                re.I,
+            )
         ):
             return token.upper()
     return None
@@ -47,8 +51,10 @@ def recognize(question, previous=None):
         q,
     ):
         return "unavailable"
-    if re.search(r"\bp\d{3}\b", q) and re.search(
-        r"explain|detail|classification|history|about", q
+    if (
+        re.search(r"\bp\d{3}\b", q)
+        and re.search(r"explain|detail|classification|history|about", q)
+        and not re.search(r"compar", q)
     ):
         return "detail"
     if segment_in(question):
@@ -69,9 +75,84 @@ def recognize(question, previous=None):
         return "anomalies"
     if re.search(r"summar|insight|overview", q):
         return "summary"
+    if re.search(r"\bp\s*\d{1,3}\b", q):
+        return "detail"
     if re.search(r"and |what about|same|those|these|them|chart|show", q) and previous:
         return previous.get("intent", "help")
+    if previous and re.search(
+        r"\b(?:all|every)\s+(?:products|skus|brands|divisions|categories)\b", q
+    ):
+        return previous.get("intent", "help")
     return "help"
+
+
+def _followup(question):
+    return bool(
+        re.search(
+            r"\b(?:what about|same|those|these|them|their|its|and|that|this)\b",
+            question,
+            re.I,
+        )
+    ) or question.strip().lower().rstrip("?.") in [
+        "show monthly demand growth",
+        "show monthly demand",
+    ]
+
+
+def _entities(question, data, previous):
+    """Resolve only known master attributes; explicit entities replace old focus."""
+    found = {}
+    products = list(
+        dict.fromkeys(
+            f"P{int(m):03d}" for m in re.findall(r"\bp\s*(\d{1,3})\b", question, re.I)
+        )
+    )
+    brands = list(
+        dict.fromkeys(
+            f"Brand {int(m)}"
+            for m in re.findall(r"\bbrand\s*(\d{1,3})\b", question, re.I)
+        )
+    )
+    if products:
+        found["product"] = products[0] if len(products) == 1 else products
+    if brands:
+        found["brand"] = brands[0] if len(brands) == 1 else brands
+    # Longest named dimensions win, avoiding Food inside a category like Pet Food.
+    candidates = []
+    catalog = data.attrs.get("entity_catalog", {})
+    for column in ["division", "category"]:
+        # The application supplies the workbook's complete master domains so a
+        # filtered-out named entity is still recognized, never silently ignored.
+        values = list(
+            dict.fromkeys([*catalog.get(column, []), *data[column].dropna().unique()])
+        )
+        for value in values:
+            for match in re.finditer(
+                r"(?<!\w)" + re.escape(str(value)) + r"(?!\w)", question, re.I
+            ):
+                candidates.append((len(str(value)), column, str(value), match.span()))
+    covered = []
+    for _, column, value, (start, end) in sorted(candidates, reverse=True):
+        if any(start >= a and end <= b for a, b in covered):
+            continue
+        covered.append((start, end))
+        found.setdefault(column, [])
+        if value not in found[column]:
+            found[column].append(value)
+    reset = bool(
+        re.search(
+            r"\b(?:all|every)\s+(?:products|skus|brands|divisions|categories)\b|dashboard selection|clear (?:focus|context)",
+            question,
+            re.I,
+        )
+    )
+    if not found and not reset and _followup(question):
+        found = {
+            column: previous[column]
+            for column in ["product", "brand", "division", "category"]
+            if previous and column in previous
+        }
+    return found
 
 
 def llm_route(question, context, api_key, model):
@@ -107,11 +188,34 @@ def _answer(
     api_key=None,
     model="gpt-4o-mini",
 ):
+    months = sorted(pd.DatetimeIndex(months).unique())
+    data = data.loc[data.month.isin(months)]
     intent = recognize(question, previous)
     notice = "Local analytical assistant · no API required"
+    # Accept compact wording such as "Top10 SKUs2025" too. A year is not a
+    # supported replacement for actual data simply because its preposition is absent.
+    requested_years = {
+        int(year) for year in re.findall(r"(?<!\d)(20\d{2})(?!\d)", question)
+    }
+    available_years = set(data.month.dt.year.unique())
+    missing_years = requested_years - available_years
+    if not data.empty and missing_years and intent != "unavailable":
+        return {
+            "text": "Actual sales data for "
+            + ", ".join(map(str, sorted(missing_years)))
+            + " is not available in your current selection. The selected sales history covers "
+            + ", ".join(map(str, sorted(available_years)))
+            + ". Use the forecasting page for clearly labelled illustrative estimates; future actuals cannot be invented.",
+            "table": None,
+            "chart": None,
+            "context": {"intent": "help"},
+            "notice": notice,
+        }
     if api_key and intent != "unavailable":
         try:
-            intent = llm_route(question, previous, api_key, model)
+            routed = llm_route(question, previous, api_key, model)
+            if intent == "help":
+                intent = routed
             notice = "LLM intent routing + verified local calculations"
         except Exception:
             notice = "API unavailable; answered using local analytical tools."
@@ -133,54 +237,140 @@ def _answer(
             "notice": notice,
         }
     scoped = data
-    # Entity extraction is an additional restriction, never a way to bypass global filters.
-    entities = {}
-    for column, pattern in [("product", r"\bp\d{3}\b"), ("brand", r"\bbrand\s+\d+\b")]:
-        found = re.search(pattern, question, re.I)
-        entity = (
-            found.group(0)
-            if found
-            else (previous or {}).get(column)
-            if re.search(r"what about|same|those|these|them|and |its", question, re.I)
-            else None
-        )
-        if entity:
-            entities[column] = entity
-            scoped = scoped.loc[scoped[column].str.lower() == entity.lower()]
+    entities = _entities(question, data, previous or {})
+    for column, values in entities.items():
+        values = values if isinstance(values, list) else [values]
+        normalized = {re.sub(r"\s+", " ", value).casefold() for value in values}
+        scoped = scoped.loc[
+            scoped[column]
+            .str.replace(r"\s+", " ", regex=True)
+            .str.casefold()
+            .isin(normalized)
+        ]
     context.update(entities)
-    if scoped.empty:
+    absent = []
+    for column, values in entities.items():
+        values = values if isinstance(values, list) else [values]
+        available = set(
+            scoped[column].str.replace(r"\s+", " ", regex=True).str.casefold()
+        )
+        absent.extend(
+            value
+            for value in values
+            if re.sub(r"\s+", " ", value).casefold() not in available
+        )
+    if scoped.empty or absent:
         return {
-            "text": "That product or brand is absent from the current filtered selection. Global filters remain in force.",
+            "text": (
+                ", ".join(absent)
+                if absent
+                else "That product, brand, division or category"
+            )
+            + " is absent from the current filtered selection. Global filters remain in force. Broaden the dashboard filters to include the requested data.",
             "table": None,
             "chart": None,
             "context": context,
             "notice": notice,
         }
-    segments = classify(scoped, months, *thresholds)
+    # Named product/brand/category questions narrow the result, not ABC's comparison universe.
+    segments = classify(data, months, *thresholds)
+    segments = segments.loc[segments["product"].isin(scoped["product"].unique())]
     table = None
     chart = None
-    nmatch = re.search(r"\b(?:top|highest)\s+(\d+)\b", question, re.I)
-    n = min(max(int(nmatch.group(1)), 1), 50) if nmatch else 10
+    nmatch = re.search(
+        r"\b(?:top|highest|first)\s+(\d+)\b|\bwhich\s+(\d+)\s+(?:products|skus)\b",
+        question,
+        re.I,
+    )
+    n = (
+        min(max(int(next(group for group in nmatch.groups() if group)), 1), 50)
+        if nmatch
+        else (previous or {}).get("limit", 10)
+        if _followup(question)
+        else 10
+    )
+    n = min(max(int(n), 1), 50)
     # Fixed SQL template; user text never enters SQL. Connection and data stay local.
     with duckdb.connect(":memory:") as con:
         con.register("sales_data", scoped)
         if intent == "top":
-            table = con.execute(
-                "SELECT product, SUM(sales) AS net_sales_aed, SUM(quantity) AS net_units FROM sales_data GROUP BY product ORDER BY net_sales_aed DESC, product LIMIT ?",
-                [n],
-            ).df()
-            text = f"Top {len(table)} products by sales after returns in your selection. Leading product {table.iloc[0]['product']}: AED {table.iloc[0].net_sales_aed:,.2f}."
-            chart = ("bar", "product", "net_sales_aed")
+            if re.search(r"profit|margin", question, re.I):
+                text = "I can rank products by net sales or net units here. Gross profit and margin are available in the SKU analysis table; please use that view for a profitability ranking."
+                context["intent"] = "help"
+                return {
+                    "text": text,
+                    "table": None,
+                    "chart": None,
+                    "context": context,
+                    "notice": notice,
+                }
+            units = bool(
+                re.search(
+                    r"by\s+(?:net\s+)?(?:units|quantity)|highest\s+(?:net\s+)?(?:units|quantity)|most\s+units",
+                    question,
+                    re.I,
+                )
+            )
+            sales_requested = bool(
+                re.search(r"\bby\s+(?:net\s+)?(?:sales|revenue)\b", question, re.I)
+            )
+            if not units and not sales_requested and _followup(question):
+                units = (previous or {}).get("rank_by") == "units"
+            rank = "net_units" if units else "net_sales_aed"
+            context.update(limit=n, rank_by="units" if units else "sales")
+            # Ordering is selected from two code-owned aliases, never user SQL.
+            templates = {
+                "net_sales_aed": "SELECT product, SUM(sales) AS net_sales_aed, SUM(quantity) AS net_units FROM sales_data GROUP BY product ORDER BY net_sales_aed DESC, product LIMIT ?",
+                "net_units": "SELECT product, SUM(sales) AS net_sales_aed, SUM(quantity) AS net_units FROM sales_data GROUP BY product ORDER BY net_units DESC, product LIMIT ?",
+            }
+            table = con.execute(templates[rank], [n]).df()
+            text = (
+                f"Top {len(table)} products by units sold minus returns in your selection. Leading product {table.iloc[0]['product']}: {table.iloc[0].net_units:,.0f} net units."
+                if units
+                else f"Top {len(table)} products by sales after returns in your selection. Leading product {table.iloc[0]['product']}: AED {table.iloc[0].net_sales_aed:,.2f}."
+            )
+            chart = ("bar", "product", rank)
         elif intent == "compare":
-            table = con.execute(
-                "SELECT month, division, SUM(quantity) AS net_units FROM sales_data GROUP BY month, division ORDER BY month, division"
-            ).df()
-            named = [
-                v for v in scoped.division.unique() if v.lower() in question.lower()
-            ]
-            if named:
-                table = table.loc[table.division.isin(named)]
-            text = "Monthly units sold minus returns, grouped by division. EA means individual units, but pack sizes and product values differ, so compare totals with care."
+            dimensions = ["product", "brand", "category", "division"]
+            dimension = next(
+                (
+                    column
+                    for column in dimensions
+                    if isinstance(entities.get(column), list)
+                    and len(entities[column]) > 1
+                ),
+                None,
+            )
+            if dimension is None:
+                group_request = re.search(
+                    r"\b(?:by|across|between|compare)\s+(?:the\s+)?(products?|skus?|brands?|categor(?:y|ies)|divisions?)\b",
+                    question,
+                    re.I,
+                )
+                if group_request:
+                    named = group_request.group(1).lower()
+                    dimension = (
+                        "category"
+                        if named.startswith("categor")
+                        else "product"
+                        if named.startswith(("product", "sku"))
+                        else named.rstrip("s")
+                    )
+            dimension = dimension or next(
+                (column for column in dimensions if column in entities), "division"
+            )
+            context["comparison_dimension"] = dimension
+            table = (
+                scoped.groupby(["month", dimension])
+                .quantity.sum()
+                .unstack(fill_value=0)
+                .reindex(sorted(months), fill_value=0)
+                .rename_axis(index="month")
+                .stack()
+                .rename("net_units")
+                .reset_index()
+            )
+            text = f"Monthly units sold minus returns, grouped by {dimension}. Included months with no sales count as zero. EA means individual units, but pack sizes and product values differ, so compare totals with care."
             chart = ("comparison", "month", "net_units")
         elif intent == "volatile":
             table = (
@@ -191,6 +381,7 @@ def _answer(
                 ]
             )
             text = "Products with the biggest month-to-month swings compared with their average demand. This score is called CV: a higher number means less steady demand. Selected months with no sales count as zero. Products with an average of zero or less cannot be scored."
+            text += " ABC groups remain relative to all products in the dashboard selection."
             chart = ("bar", "product", "demand_cv")
         elif intent == "segment":
             segment = segment_in(question) or (previous or {}).get("segment", "AZ")
@@ -208,7 +399,7 @@ def _answer(
                 ],
             ]
             text = (
-                f"{len(table)} products fall in {segment} in this scope. "
+                f"{len(table)} products fall in {segment} in this scope. ABC groups are calculated against all products in the dashboard selection; named entities only narrow the displayed results. "
                 + RECOMMENDATIONS.get(segment, "Review the demand history.")
             )
         elif intent == "declining":
@@ -246,7 +437,11 @@ def _answer(
                 ):
                     table.loc[i, "growth_pct"] = float("nan")
             text = "Monthly units sold minus returns, and the change from the previous month. Growth is N/A if the previous month had zero or negative units, or was not selected."
-            if intent == "detail" and "product" in entities:
+            if (
+                intent == "detail"
+                and "product" in entities
+                and not isinstance(entities["product"], list)
+            ):
                 row = segments.iloc[0]
                 # Classification must retain the full dashboard comparison population.
                 universe = classify(data, months, *thresholds)
@@ -386,4 +581,10 @@ def answer(
             result["notice"] = (
                 "Verified local calculations; optional AI interpretation unavailable."
             )
+    focused = []
+    for name in ["product", "brand", "division", "category"]:
+        value = result["context"].get(name)
+        if value:
+            focused.append(", ".join(value) if isinstance(value, list) else str(value))
+    result["scope_note"] = " · ".join(focused) if focused else "Dashboard selection"
     return result

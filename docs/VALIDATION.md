@@ -2,6 +2,25 @@
 
 Validated in the supplied Linux cloud environment on Python 3.12 using the actual assessment workbook. Direct package versions are recorded in `requirements.lock.txt`.
 
+## Current release — November 13, 2026
+
+The final automated suite passed **85 tests** in 85.70 seconds. Ruff's F checks, Python compilation and `git diff --check` also passed. The earlier sections below are historical validation records.
+
+New coverage verifies:
+
+- Like-for-like Q4/Q3 comparisons under the same dimension filters, invalid prior periods, missing source coverage, and margin percentage-point differences.
+- Planning-brief ZIP reconciliation across KPI, monthly and segmentation files; threshold/scope metadata; prepared-download invalidation after filter changes.
+- Combined SKU class/focus/search/sort controls, the 14-product AZ segment, literal search, empty states, reset and filtered product history.
+- Both forecast models on matched one-month origins and complete three-month paths, no future leakage, signed/zero-demand handling and the review-pack contents.
+- Assistant ABC population consistency, replacement/retention of entity focus, units-to-sales ranking follow-ups, brand/category comparison dimensions, filtered-out named entities, unsupported years and transcript redaction.
+- Corrupt uploads, blank identifiers, duplicate headers, boolean/nonfinite numeric values, scoped KPIs, calendar gaps and incomplete-workbook recovery.
+
+Fresh Chromium runs of `tests/browser_smoke.py` and `tests/advancement_browser_smoke.py` passed against the finished local app. They covered all five pages, Plotly hover/zoom/autoscale, filter changes, SKU selection, assistant execution, exports and a 390-pixel mobile layout without main-content overflow. The new browser checks downloaded and inspected the Q4 planning brief (AED 113,146,628.69 net sales), 14 AZ explorer rows, four model-comparison rows, the forecast ZIP, the chat transcript and 227 flagged records. Those records comprise 11 quantity/financial sign differences and 216 financial adjustments with zero quantity; flags are review candidates, not confirmed errors. Source totals remain unchanged.
+
+`tests/assistant_browser_smoke.py` also passed the floating launcher, typed missing-inventory response, result download, New chat, close/page preservation and mobile input checks. No paid API was used. The final source is covered by a new GitHub Actions workflow for pushes to `main` and pull requests; hosted Actions success and the live Streamlit Cloud deployment are not established by these local checks.
+
+The pre-upgrade revision `aaaca5d` is preserved on GitHub as **`supplyiq-before-advancements-2026-11-13`**. Current previews show the navy/gold overview and the filtered SKU explorer.
+
 ## Automated suite
 
 `python -m pytest -q`: **27 passed**, including:

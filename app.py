@@ -24,6 +24,10 @@ def dismiss_supplyiq_dialog():
     st.session_state["assistant_dialog_open"] = False
 
 
+def use_available_months(months):
+    st.session_state["filter_months"] = months
+
+
 @st.dialog(
     "SupplyIQ — AI Planning Assistant",
     width="large",
@@ -120,6 +124,7 @@ with filter_panel:
         full, last = st.columns(2)
         full.button("Full year", on_click=set_period, args=(0,), width="stretch")
         last.button("Q4 only", on_click=set_period, args=(9,), width="stretch")
+        st.button("Last 6 months", on_click=set_period, args=(6,), width="stretch")
         selected_months = st.multiselect(
             "Month",
             MONTHS.tolist(),
@@ -191,6 +196,10 @@ if not 0 < a < b < 100 or not 0 <= x < y:
     st.error("Set thresholds to 0 < A < B < 100 and 0 ≤ X < Y.")
     st.stop()
 filtered = filter_data(data, selections, selected_months)
+filtered.attrs["entity_catalog"] = {
+    column: data[column].unique().tolist()
+    for column in ["product", "brand", "division", "category"]
+}
 thresholds = (a, b, x, y)
 scope = hashlib.sha256(payload).hexdigest() + str(selections) + str(selected_months)
 if page == "SupplyIQ assistant":
@@ -222,6 +231,27 @@ if len(selected_months) < 12:
     st.caption(
         "Partial-year selection. Annual monthly average still divides selected units by 12."
     )
+source_months = pd.DatetimeIndex(sorted(data.month.unique()))
+missing_selected = pd.DatetimeIndex(selected_months).difference(source_months)
+if report.get("missing_calendar_months", "None") != "None":
+    st.warning(
+        "Source coverage needs review. The workbook has no records for "
+        + report["missing_calendar_months"]
+        + ". We cannot confirm whether these months had no sales or are missing from the file."
+    )
+if len(missing_selected) and page != "Data quality & downloads":
+    st.session_state["assistant_dialog_open"] = False
+    st.session_state.pop("assistant_pending_question", None)
+    st.info(
+        "Choose months present in the workbook before analysing demand. Months without sales for an individual product still count as zero when the source month is present."
+    )
+    st.button(
+        "Use available months",
+        on_click=use_available_months,
+        args=(source_months.tolist(),),
+        type="primary",
+    )
+    st.stop()
 if filtered.empty:
     st.session_state["assistant_dialog_open"] = False
     st.session_state.pop("assistant_pending_question", None)
@@ -233,7 +263,19 @@ if filtered.empty:
         views.quality(data, report, filtered, selected_months)
     st.stop()
 if page == "Executive overview":
-    views.overview(filtered, selected_months)
+    reference_data = (
+        filter_data(data, selections, MONTHS)
+        if st.session_state.get("overview_compare", False)
+        else filtered
+    )
+    views.overview(
+        filtered,
+        selected_months,
+        reference_data=reference_data,
+        thresholds=thresholds,
+        scope=scope,
+        available_months=source_months,
+    )
 elif page == "SKU analysis":
     views.intelligence(filtered, selected_months, thresholds)
 elif page == "Demand forecasting":

@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import re
 import streamlit as st
 from .ai_assistant import answer
 from .assistant_actions import queue_question
@@ -35,6 +36,50 @@ def api_configuration():
     return key, model
 
 
+def conversation_markdown(messages):
+    """Export only user-facing retained content, never configuration or provider metadata."""
+
+    def safe(value):
+        text = re.sub(
+            r"""(?im)\b(OPENAI_API_KEY|API_KEY|PASSWORD|TOKEN)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s]+)""",
+            r"\1=[redacted]",
+            str(value),
+        )
+        return re.sub(r"\bsk-[A-Za-z0-9_-]{16,}", "[redacted key]", text)
+
+    lines = [
+        "# SupplyIQ conversation",
+        "",
+        "Retained messages for the current dashboard filter selection. Sales-based analysis; stock and supplier information are not provided.",
+        "",
+    ]
+    for message in messages:
+        if message.get("role") not in ["user", "assistant"]:
+            continue
+        lines.extend(
+            [
+                "## " + ("You" if message["role"] == "user" else "SupplyIQ"),
+                "",
+                safe(message.get("text", "")),
+                "",
+            ]
+        )
+        if message.get("scope_note"):
+            lines.extend(["Question focus: " + safe(message["scope_note"]), ""])
+        table = message.get("table")
+        if table is not None and not table.empty:
+            lines.extend(
+                [
+                    "Calculated results (CSV):",
+                    "```csv",
+                    safe(table.to_csv(index=False).rstrip()),
+                    "```",
+                    "",
+                ]
+            )
+    return "\n".join(lines)
+
+
 def render_assistant(data, months, thresholds, scope, compact=False):
     prefix = "supplyiq_dialog" if compact else "supplyiq_page"
     fingerprint = hashlib.sha256((scope + str(thresholds)).encode()).hexdigest()
@@ -58,7 +103,8 @@ def render_assistant(data, months, thresholds, scope, compact=False):
             on_click=clear_conversation,
             width="stretch",
         )
-        with settings.popover("Settings", width="stretch"):
+        settings_panel = settings.popover("Settings", width="stretch")
+        with settings_panel:
             st.caption("No API key is needed for built-in analysis.")
             enabled = st.toggle(
                 "Use optional AI service",
@@ -105,6 +151,19 @@ def render_assistant(data, months, thresholds, scope, compact=False):
         )
         st.session_state.messages = st.session_state.messages[-20:]
         st.session_state.chat_context = result["context"]
+    with settings_panel:
+        st.download_button(
+            "Download conversation",
+            conversation_markdown(st.session_state.messages).encode("utf-8"),
+            file_name="supplyiq_conversation.md",
+            mime="text/markdown",
+            key=prefix + "_transcript",
+            disabled=not st.session_state.messages,
+            width="stretch",
+        )
+        st.caption(
+            "Exports the retained conversation and calculated results for the current filters. New chat clears it."
+        )
     with conversation:
         if data.empty:
             st.info("Select data in the dashboard before asking a question.")
@@ -131,6 +190,11 @@ def render_assistant(data, months, thresholds, scope, compact=False):
                 with st.chat_message(message["role"]):
                     st.write(message["text"])
                     if message["role"] == "assistant":
+                        if (
+                            message.get("scope_note")
+                            and message["scope_note"] != "Dashboard selection"
+                        ):
+                            st.caption("Question focus: " + message["scope_note"])
                         notice = message.get("notice", "")
                         st.caption(
                             "AI service unavailable; using built-in analysis."
@@ -160,7 +224,18 @@ def render_assistant(data, months, thresholds, scope, compact=False):
                                             x,
                                             y,
                                             "Results from your data",
-                                            "division"
+                                            (
+                                                next(
+                                                    column
+                                                    for column in [
+                                                        "product",
+                                                        "brand",
+                                                        "category",
+                                                        "division",
+                                                    ]
+                                                    if column in table.columns
+                                                )
+                                            )
                                             if kind == "comparison"
                                             else None,
                                         )
