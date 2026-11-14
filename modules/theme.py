@@ -55,8 +55,9 @@ h1,h2,h3 {letter-spacing:-.035em;}
 /* One gold trim ties the navy anchor to the light KPI cards. */
 .st-key-kpi_card_0 {border-top:2px solid var(--iq-gold);}
 .js-plotly-plot .modebar {border:1px solid #E5E2D9;border-radius:7px;padding:2px !important;}
-/* Chart panels use one border, a quiet header and generous plotting space. */
-.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,.st-key-dashboard_alerts {background:white;border:1px solid var(--iq-border);border-radius:16px;box-shadow:0 3px 12px #14253D04;}
+/* Transparent chart panels blend into the canvas; borders keep each section clear. */
+.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,.st-key-dashboard_alerts {border:1px solid var(--iq-border);border-radius:16px;box-shadow:none;}
+.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products {background:transparent;}
 .st-key-dashboard_trend [data-testid="stPlotlyChart"],.st-key-dashboard_divisions [data-testid="stPlotlyChart"],.st-key-dashboard_products [data-testid="stPlotlyChart"] {border:0;box-shadow:none;padding:0;}
 .st-key-dashboard_alerts [data-testid="stVerticalBlock"] {gap:10px;}
 .st-key-dashboard_alerts {background:linear-gradient(155deg,#14253D,#233B53);border:1px solid #3D4A59;}
@@ -72,7 +73,7 @@ h1,h2,h3 {letter-spacing:-.035em;}
 .st-key-global_filter_bar {background:white;border:1px solid var(--iq-border);border-radius:12px;box-shadow:none;}
 .st-key-global_filter_bar [data-testid="stVerticalBlock"] {gap:8px;}
 .st-key-dashboard_trend [data-testid="stVerticalBlock"],.st-key-dashboard_divisions [data-testid="stVerticalBlock"],.st-key-dashboard_products [data-testid="stVerticalBlock"] {gap:10px;}
-[data-testid="stPlotlyChart"] {background:white;border:1px solid var(--iq-border);border-radius:14px;padding:8px;}
+[data-testid="stPlotlyChart"] {background:transparent;border:1px solid var(--iq-border);border-radius:14px;padding:8px;}
 [data-testid="stDataFrame"] {border-radius:12px;overflow:hidden;border:1px solid var(--iq-border);}
 /* Planning-page metric tiles and review controls. Overview anchors/dialogs are excluded. */
 [data-testid="stMain"] [data-testid="stMetric"]:not([class*="st-key-kpi_card_"] [data-testid="stMetric"]):not([role="dialog"] [data-testid="stMetric"]) {background:white;border-color:var(--iq-border);border-radius:12px;padding:14px 16px;min-height:104px;box-shadow:0 2px 8px #14253D03;}

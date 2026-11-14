@@ -4,6 +4,8 @@ A Streamlit dashboard for the supplied **Assignment_Supply_Planner_Consumer.xlsx
 
 The interface uses navy, muted gold and warm white, with a focused overview, interactive charts and help beside each measure. Original technical names such as **MoM Demand Growth**, **ABC–XYZ**, **Demand CV**, **MAE** and **WAPE** remain intact; their explanations use simple language.
 
+Chart panels and graph canvases use transparent backgrounds, letting the dashboard's warm neutral background show through. Subtle borders keep sections distinct, with navy-and-gold data highlights and readable hover details.
+
 ## Run locally
 
 Use Python **3.12**, the tested version. Python 3.11 is also supported; Python 3.14 has not been validated for this project.
@@ -121,7 +123,7 @@ Validation covers workbook loading/joins, metric reconciliation, classifications
 
 The current local suite passes **85 tests**. GitHub Actions is configured to run the analytical and Streamlit suite on pushes to `main` and pull requests. For live browser checks with the app running, use `python tests/browser_smoke.py`, `python tests/assistant_browser_smoke.py` and `python tests/advancement_browser_smoke.py`.
 
-[Current desktop overview](docs/screenshots/supplyiq-advancements-desktop.png) · [Filtered SKU explorer](docs/screenshots/supplyiq-advancements-explorer.png)
+[Transparent chart panels](docs/screenshots/supplyiq-transparent-desktop.png) · [Mobile preview](docs/screenshots/supplyiq-transparent-mobile.png) · [Filtered SKU explorer](docs/screenshots/supplyiq-advancements-explorer.png)
 
 ```text
 app.py                         # Navigation, global scope, cached workbook loading
@@ -145,6 +147,8 @@ Runtime dependencies are in `requirements.txt`; tested direct package versions a
 ## Saved versions
 
 The version immediately before these advancements is preserved by the tag **`supplyiq-before-advancements-2026-11-13`**. The original dashboard is preserved as **`dashboard-v1-original`**; earlier redesign tags remain in Git history.
+
+The version before transparent chart backgrounds is preserved as **`supplyiq-before-transparent-charts-2026-11-14`**.
 
 To inspect the saved version on a separate local branch:
 

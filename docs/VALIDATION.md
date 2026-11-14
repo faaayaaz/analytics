@@ -2,7 +2,11 @@
 
 Validated in the supplied Linux cloud environment on Python 3.12 using the actual assessment workbook. Direct package versions are recorded in `requirements.lock.txt`.
 
-## Current release — November 13, 2026
+## Transparent chart backgrounds — November 14, 2026
+
+Three targeted chart-help and overview-layout tests passed. Chromium verified transparent computed backgrounds on the monthly, division and product chart panels, Streamlit chart wrappers and both Plotly paper/plot layers. The Gross Margin chart switch still works; the headline sales total remains AED 441,894,325 when rounded for display. Desktop and 390-pixel mobile previews were inspected/captured; the mobile main area has no horizontal overflow and no browser page errors were reported. The preceding version is saved as `supplyiq-before-transparent-charts-2026-11-14`.
+
+## Analytical advancement release — November 13, 2026
 
 The final automated suite passed **85 tests** in 85.70 seconds. Ruff's F checks, Python compilation and `git diff --check` also passed. The earlier sections below are historical validation records.
 
