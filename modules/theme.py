@@ -1,4 +1,4 @@
-"""SupplyIQ visual system: tailored navy, muted gold and warm neutral surfaces."""
+"""SupplyIQ visual system: navy, muted gold and frosted glass chart surfaces."""
 
 import streamlit as st
 
@@ -7,7 +7,7 @@ def apply_theme():
     st.markdown(
         """<style>
 :root {--iq-navy:#14253D;--iq-gold:#B99146;--iq-accent:#B99146;--iq-gold-light:#D9BE82;--iq-muted:#687486;--iq-border:#E5E2D9;}
-.stApp {background:#F7F6F2;color:#14253D;}
+.stApp {background-color:#F0F0EC;background-image:radial-gradient(ellipse at 88% 12%,#B9914642 0%,transparent 48%),radial-gradient(ellipse at 18% 60%,#2944642B 0%,transparent 52%),linear-gradient(135deg,#F7F6F2 5%,#E9EDF0 54%,#F1E8D9 100%);background-attachment:fixed;color:#14253D;}
 .block-container {padding-top:3.1rem;padding-bottom:2rem;max-width:1740px;}
 h1,h2,h3 {letter-spacing:-.035em;}
 .dashboard-heading {padding:4px 0 12px;}
@@ -55,10 +55,10 @@ h1,h2,h3 {letter-spacing:-.035em;}
 /* One gold trim ties the navy anchor to the light KPI cards. */
 .st-key-kpi_card_0 {border-top:2px solid var(--iq-gold);}
 .js-plotly-plot .modebar {border:1px solid #E5E2D9;border-radius:7px;padding:2px !important;}
-/* Transparent chart panels blend into the canvas; borders keep each section clear. */
+/* Frosted glass sits over a quiet navy/gold canvas; only the backdrop is blurred. */
 .st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,.st-key-dashboard_alerts {border:1px solid var(--iq-border);border-radius:16px;box-shadow:none;}
-.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products {background:transparent;}
-.st-key-dashboard_trend [data-testid="stPlotlyChart"],.st-key-dashboard_divisions [data-testid="stPlotlyChart"],.st-key-dashboard_products [data-testid="stPlotlyChart"] {border:0;box-shadow:none;padding:0;}
+.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,[data-testid="stPlotlyChart"] {background-color:rgba(255,255,255,.32);background-image:linear-gradient(135deg,rgba(255,255,255,.64),rgba(255,255,255,.10) 52%,rgba(217,190,130,.12));border:1px solid rgba(255,255,255,.76);border-radius:18px;box-shadow:0 12px 30px rgba(20,37,61,.07),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(185,145,70,.12);-webkit-backdrop-filter:blur(20px) saturate(135%);backdrop-filter:blur(20px) saturate(135%);}
+.st-key-dashboard_trend [data-testid="stPlotlyChart"],.st-key-dashboard_divisions [data-testid="stPlotlyChart"],.st-key-dashboard_products [data-testid="stPlotlyChart"] {background:transparent;border:0;box-shadow:none;padding:0;-webkit-backdrop-filter:none;backdrop-filter:none;}
 .st-key-dashboard_alerts [data-testid="stVerticalBlock"] {gap:10px;}
 .st-key-dashboard_alerts {background:linear-gradient(155deg,#14253D,#233B53);border:1px solid #3D4A59;}
 .st-key-dashboard_alerts h3,.st-key-dashboard_alerts p {color:#F1F0EB;}
@@ -73,7 +73,7 @@ h1,h2,h3 {letter-spacing:-.035em;}
 .st-key-global_filter_bar {background:white;border:1px solid var(--iq-border);border-radius:12px;box-shadow:none;}
 .st-key-global_filter_bar [data-testid="stVerticalBlock"] {gap:8px;}
 .st-key-dashboard_trend [data-testid="stVerticalBlock"],.st-key-dashboard_divisions [data-testid="stVerticalBlock"],.st-key-dashboard_products [data-testid="stVerticalBlock"] {gap:10px;}
-[data-testid="stPlotlyChart"] {background:transparent;border:1px solid var(--iq-border);border-radius:14px;padding:8px;}
+[data-testid="stPlotlyChart"] {padding:8px;}
 [data-testid="stDataFrame"] {border-radius:12px;overflow:hidden;border:1px solid var(--iq-border);}
 /* Planning-page metric tiles and review controls. Overview anchors/dialogs are excluded. */
 [data-testid="stMain"] [data-testid="stMetric"]:not([class*="st-key-kpi_card_"] [data-testid="stMetric"]):not([role="dialog"] [data-testid="stMetric"]) {background:white;border-color:var(--iq-border);border-radius:12px;padding:14px 16px;min-height:104px;box-shadow:0 2px 8px #14253D03;}
@@ -143,6 +143,10 @@ button:focus-visible {outline:3px solid #C4A15C !important;outline-offset:2px;}
 .metric-kicker {font-size:8px;letter-spacing:1px;}
 }
 @media(prefers-reduced-motion:reduce) {* {transition:none !important;animation:none !important;}}
+@media(prefers-reduced-transparency:reduce) {
+.st-key-dashboard_trend,.st-key-dashboard_divisions,.st-key-dashboard_products,[data-testid="stPlotlyChart"] {background:#F7F6F2;-webkit-backdrop-filter:none;backdrop-filter:none;}
+.st-key-dashboard_trend [data-testid="stPlotlyChart"],.st-key-dashboard_divisions [data-testid="stPlotlyChart"],.st-key-dashboard_products [data-testid="stPlotlyChart"] {background:transparent;}
+}
 </style>""",
         unsafe_allow_html=True,
     )

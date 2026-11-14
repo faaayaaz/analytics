@@ -2,6 +2,10 @@
 
 Validated in the supplied Linux cloud environment on Python 3.12 using the actual assessment workbook. Direct package versions are recorded in `requirements.lock.txt`.
 
+## Frosted-glass chart panels — November 14, 2026
+
+Three targeted chart-help and overview-layout tests passed. Chromium verified translucent fills and 20px backdrop blur on the monthly, division and product panels, with transparent/unblurred inner chart wrappers and Plotly paper/plot layers. Chart hover help, bar tooltips, Gross Margin switching, zoom/autoscale and SupplyIQ's floating launcher/dialog/query/close flow passed. The rounded sales total remains AED 441,894,325. Desktop and 390-pixel mobile screenshots were inspected; no browser page errors or mobile main-area overflow were reported. CSS includes the WebKit blur property and a solid-surface reduced-transparency preference. The preceding plain-transparency version is saved as `supplyiq-before-frosted-glass-2026-11-14`.
+
 ## Transparent chart backgrounds — November 14, 2026
 
 Three targeted chart-help and overview-layout tests passed. Chromium verified transparent computed backgrounds on the monthly, division and product chart panels, Streamlit chart wrappers and both Plotly paper/plot layers. The Gross Margin chart switch still works; the headline sales total remains AED 441,894,325 when rounded for display. Desktop and 390-pixel mobile previews were inspected/captured; the mobile main area has no horizontal overflow and no browser page errors were reported. The preceding version is saved as `supplyiq-before-transparent-charts-2026-11-14`.
